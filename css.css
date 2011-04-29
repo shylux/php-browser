@@ -1,0 +1,6 @@
+.browsefile_item {
+	list-style-image: url(file_icon.png);
+}
+.browsedir_item {
+	list-style-image: url(folder_icon.png);
+}
