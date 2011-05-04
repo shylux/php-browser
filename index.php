@@ -18,7 +18,7 @@ as the name is changed.
 /*************CONFIGURATION*************/
 
 $prison = "/var/www/";
-$upload_enabled = false;
+$upload_enabled = true;
 
 /***************************************/
 
@@ -32,6 +32,9 @@ function main() {
 	echo $GLOBALS['head'];
 	if ($_GET['action'] == "browse") browse();
 	if ($_GET['action'] == "upload") upload();
+	if ($_GET['action'] == "createdir") {
+					createdir();
+					browse();}
 	echo "</body></html>";
 }
 
@@ -56,7 +59,14 @@ function download() {
 }
 
 function upload() {
-	if (!$GLOBALS["upload_enabled"]) return "Upload deactivated by User.";
+	if (!$GLOBALS["upload_enabled"]) {
+		echo "Upload deactivated by User.";
+		return;
+	}
+
+	for ($i = 0; $i < count($_FILES['files']['name']); $i++) {
+		var_dump($_FILES['files']['name'][$i]);
+	}
 
 	$dest = $_GET["path"].DIRECTORY_SEPARATOR.$_FILES["uploadfile"]["name"];
 	if (file_exists($dest)) {
@@ -65,6 +75,11 @@ function upload() {
 		move_uploaded_file($_FILES["uploadfile"]["tmp_name"], $dest);
 		echo "Successful uploaded $dest";
 	}
+}
+
+function createdir() {
+	if (!isset($_GET['dirname'])) return;
+	echo "Create dir: " . $_GET['dirname'] . "<br/>";
 }
 
 class MyFile {
@@ -91,6 +106,9 @@ class MyFile {
 	public function isFile() {
 		return (is_file($this)) ? true : false;
 	}
+	public function isDir() {
+		return !$this->isFile();
+	}
 	public function isHidden() {
 		return ($this->name == null) ? true : false;
 	}
@@ -98,10 +116,10 @@ class MyFile {
 		if ($this->isHidden()) {
 			return "." . $this->extension;
 		} else {
-			if ($this->isFile()) {
-				return $this->name . "." . $this->extension;
-			} else {
+			if ($this->isDir() || $this->extension == "") {
 				return $this->name;
+			} else {
+				return $this->name . "." . $this->extension;
 			}
 		}
 	}
@@ -172,9 +190,10 @@ function phplink() {
 }
 
 //Files
-$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input name=\"uploadfile\" type=\"file\" /><input type=\"submit\" value=\"Start upload\" /></form>";
-$head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><link rel=\"stylesheet\" type=\"text/css\" href=\"css.css\" />        <title>Browser</title></head><body>";
-
+//$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input name=\"uploadfile\" type=\"file\" /><input type=\"submit\" value=\"Start upload\" /></form>";
+//$head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><link rel=\"stylesheet\" type=\"text/css\" href=\"css.css\" />        <title>Browser</title></head><body>";
+$uploadform = file_get_contents("uploadform");
+$head = file_get_contents("head");
 
 //Start logic
 main();
