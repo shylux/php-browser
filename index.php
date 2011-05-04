@@ -19,6 +19,8 @@ as the name is changed.
 
 $prison = "/var/www/";
 $upload_enabled = true;
+$createdir_enabled = true;
+
 
 /***************************************/
 
@@ -28,6 +30,7 @@ if (!startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
 
 function main() {
+	if (isset($_GET['error'])) showerror();
 	if ($_GET['action'] == "download") download();
 	echo $GLOBALS['head'];
 	if ($_GET['action'] == "browse") browse();
@@ -50,8 +53,9 @@ function browse() {
 	foreach ($list as $i => $value) {
 		echo($value->link());
 	}
+	echo $main_dir->createdir_form();
 	echo "</ul>";
-	echo $main_dir->uploadform();
+	echo $main_dir->upload_form();
 }
 function download() {
 	download_file($_GET['path']);
@@ -78,8 +82,18 @@ function upload() {
 }
 
 function createdir() {
-	if (!isset($_GET['dirname'])) return;
-	echo "Create dir: " . $_GET['dirname'] . "<br/>";
+	if (!isset($_GET['dirname'])) redirect();
+	echo "Create dir: " . $_GET['path'] . DIRECTORY_SEPARATOR . $_GET['dirname'] . "<br/>";
+	mkdir($_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname']);
+}
+
+function showerror() {
+	echo $_GET['error'] . "<br/>";
+}
+
+function redirect($errormessage) {
+	header('Location: ' . phplink());
+	die();
 }
 
 class MyFile {
@@ -125,21 +139,25 @@ class MyFile {
 	}
 	public function link() {
 		if ($this->isFile()) {
-			return "<li class=\"browsefile_item\"><a class=\"browsefile\" href=\"" . $this->phplink() . "?action=download&amp;path=$this\">" . $this->getName() . "</a></li>";
+			return '<li class="browsefile_item"><a class="browsefile" href="' . $this->phplink() . "?action=download&amp;path=$this\">" . $this->getName() . '</a></li>';
 		} else {
-			return "<li class=\"browsedir_item\"><a class=\"browsedir\" href=\"" . $this->phplink() . "?action=browse&amp;path=$this\">" . $this->getName() . "</a></li>";
+			return '<li class="browsedir_item"><a class="browsedir" href="' . $this->phplink() . "?action=browse&amp;path=$this\">" . $this->getName() . '</a></li>';
 		}
 	}
 	public static function phplink() {
 		return "http://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
 	}
-	public function uploadform() {
+	public function upload_form() {
 		if (!$GLOBALS["upload_enabled"]) return "Upload deactivated by User.";
 		if (!is_writable($this)) return "Can't upload files because directory is not writable.";
 
 		$html = $GLOBALS["uploadform"];
 		$html = str_replace(array("[[uploadactiontarget]]"), array(MyFile::phplink()."?action=upload&amp;path=$this"), $html);
 		return $html;
+	}
+	public function createdir_form() {
+		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
+		echo '<li class="browsedir_item"><form method="GET" action="'.$this->phplink().'"><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="input" /><input type="submit" value="Create Directory" /></form></li>';
 	}
 	public function listfiles() {
 		$dir_handle = @opendir($this);
