@@ -1,4 +1,10 @@
 <?php
+/**********************************************
+* Project:   PHP Browser                      *
+* Date:      4 May 2011                       *
+* Developer: Lukas Knöpfel alias Shylux       *
+* Contact:   shylux@gmail.com                 *
+**********************************************/
 /*
            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
                    Version 2, December 2004
@@ -32,12 +38,10 @@ if (!isset($_GET['action'])) $_GET['action'] = "browse";
 function main() {
 	if (isset($_GET['error'])) showerror();
 	if ($_GET['action'] == "download") download();
+	if ($_GET['action'] == "createdir") createdir();
+	if ($_GET['action'] == "upload") upload();
 	echo $GLOBALS['head'];
 	if ($_GET['action'] == "browse") browse();
-	if ($_GET['action'] == "upload") upload();
-	if ($_GET['action'] == "createdir") {
-					createdir();
-					browse();}
 	echo "</body></html>";
 }
 
@@ -50,9 +54,17 @@ function browse() {
 
 	$list = $main_dir->listfiles();
 	echo "<ul>";
+
+	$upperdir = pathinfo($main_dir);
+	$up = new MyFile("");
+	$up->name = $upperdir['dirname'];
+	echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
+	
+
 	foreach ($list as $i => $value) {
 		echo($value->link());
 	}
+	if (count($list) == 1) echo '<br/><li class="browseempty_item">Folder is empty!</li><br/>';
 	echo $main_dir->createdir_form();
 	echo "</ul>";
 	echo $main_dir->upload_form();
@@ -64,35 +76,39 @@ function download() {
 
 function upload() {
 	if (!$GLOBALS["upload_enabled"]) {
-		echo "Upload deactivated by User.";
-		return;
+		showerror("Upload deactivated by User.");
 	}
 
+	$errstr = "";
 	for ($i = 0; $i < count($_FILES['files']['name']); $i++) {
 		var_dump($_FILES['files']['name'][$i]);
+		$dest = $_GET["path"] . DIRECTORY_SEPARATOR . $_FILES['files']['name'][$i];
+		if (file_exists($dest)) {
+			if (strlen($errstr) != 0) $errstr .= ", ";
+			$errstr .= $_FILES['files']['name'][$i];
+		}
+		move_uploaded_file($_FILES["files"]["tmp_name"][$i], $dest);
 	}
-
-	$dest = $_GET["path"].DIRECTORY_SEPARATOR.$_FILES["uploadfile"]["name"];
-	if (file_exists($dest)) {
-		echo "$dest already exists.";
-	} else {
-		move_uploaded_file($_FILES["uploadfile"]["tmp_name"], $dest);
-		echo "Successful uploaded $dest";
-	}
+	if (strlen($errstr)!=0) redirect($errstr . " exists in target directory.");
+	redirect("Upload successful");
 }
 
+//Create a Directory in the GET[path] with the given GET[dirname]
 function createdir() {
 	if (!isset($_GET['dirname'])) redirect();
-	echo "Create dir: " . $_GET['path'] . DIRECTORY_SEPARATOR . $_GET['dirname'] . "<br/>";
-	mkdir($_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname']);
+	$newdirname = $_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname'];
+	if (file_exists($newdirname)) redirect("Directory already exists.");
+	mkdir($newdirname);
 }
 
 function showerror() {
-	echo $_GET['error'] . "<br/>";
+	if (strlen($_GET['error']) == 0) return;
+	echo '<div id="errormessage">'.$_GET['error'] ."</div><br/>";
 }
 
+//Redirect to the browse action and adds the $errormessage to the GET-Parameters
 function redirect($errormessage) {
-	header('Location: ' . phplink());
+	header('Location: ' . phplink() . "?action=browse&path=" . $_GET['path'] . "&error=$errormessage");
 	die();
 }
 
@@ -139,9 +155,16 @@ class MyFile {
 	}
 	public function link() {
 		if ($this->isFile()) {
-			return '<li class="browsefile_item"><a class="browsefile" href="' . $this->phplink() . "?action=download&amp;path=$this\">" . $this->getName() . '</a></li>';
+			return '<li class="browsefile_item"><a class="browsefile" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
 		} else {
-			return '<li class="browsedir_item"><a class="browsedir" href="' . $this->phplink() . "?action=browse&amp;path=$this\">" . $this->getName() . '</a></li>';
+			return '<li class="browsedir_item"><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
+		}
+	}
+	public function httplink_html() {
+		if ($this->isFile()) {
+			return $this->phplink() . "?action=download&amp;path=$this";
+		} else {
+			return $this->phplink() . "?action=browse&amp;path=$this";
 		}
 	}
 	public static function phplink() {
@@ -161,19 +184,16 @@ class MyFile {
 	}
 	public function listfiles() {
 		$dir_handle = @opendir($this);
-		$counter = 1;
+		$counter = 0;
 		$rearr = array();
 		$rearrinfo = array();
-		$upperdir = pathinfo($this);
 		while (false !== ($file = readdir($dir_handle))) {
 			if ($file == ".." || $file == ".") continue;
 			$rearr[$counter] = $file;
-			$counter += 1;
+			$counter++;
 		}
-		$counter = 1;
+		$counter = 0;
 		natcasesort($rearr);
-		$rearrinfo[0] = new MyFile("");
-		$rearrinfo[0]->name = $upperdir['dirname'];
 		foreach ($rearr as $i => $value) {
 			$rearrinfo[$counter] = new MyFile($this . DIRECTORY_SEPARATOR . $value);
 			$counter += 1;

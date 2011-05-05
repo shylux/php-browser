@@ -4,3 +4,12 @@
 .browsedir_item {
 	list-style-image: url(folder_icon.png);
 }
+.browseempty_item {
+	list-style-type: none;
+}
+.browseup_item {
+	list-style-image: url(up_icon.png);
+}
+#errormessage {
+	background-color: red;
+}
