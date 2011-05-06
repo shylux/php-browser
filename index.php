@@ -6,19 +6,21 @@
 * Contact:   shylux@gmail.com                 *
 **********************************************/
 /*
-           DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-                   Version 2, December 2004
+           SHYLUX PUBLIC LICENSE
+          Version 1, May 2011
 
-Copyright (C) 2004 Sam Hocevar
- 14 rue de Plaisance, 75014 Paris, France
+Copyright (C) 2011 Lukas Knoepfel 
+ Parkstrasse 28, 3700 Spiez, Switzerland
 Everyone is permitted to copy and distribute verbatim or modified
 copies of this license document, and changing it is allowed as long
 as the name is changed.
 
-           DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+           SHYLUX PUBLIC LICENSE
   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
- 0. You just DO WHAT THE FUCK YOU WANT TO.
+ 0. Put the name of the developer on top of the code you copied.
+ 1. Mark the code you copied and add a copy or a link to this licence.
+ 2. Contact the developer so he can track his code.
 */
 
 /*************CONFIGURATION*************/
@@ -27,12 +29,25 @@ $prison = "/var/www/";
 $upload_enabled = true;
 $createdir_enabled = true;
 $pw_protection = true;
-$pw = "test";
+$pw = "testpassword";
+$protocol = (isset($_SERVER['HTTPS']))?'https://':'http://';
 
 
 /***************************************/
 
-//Path
+/*****************UPLOAD*****************
+If you want to use the upload function you should modify the following entrys in php.ini (normally in /etc/php5/apache2/):
+
+file_uploads = On (enable uploads)
+upload_max_filesize = 1G (or 200M or whatever)
+max_file_uploads = 1000 (number of files in one upload request)
+post_max_size = 1G (same as upload_max_filesize)
+max_execution_time = 300 (time available for upload in seconds. remeber that other may have slower connections than you)
+
+****************************************/
+
+//Set up vars
+$prison = realpath($prison);
 $_GET['path'] = (isset($_GET['path'])) ? realpath($_GET['path']) : $prison;
 if (!startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
@@ -40,7 +55,7 @@ if (!isset($_GET['action'])) $_GET['action'] = "browse";
 function main() {
 	if ($_GET['action'] == "login") login();
 	checkpw();
-	if (isset($_GET['error'])) showerror();
+	if (isset($_GET['msg'])) showmsg();
 	if ($_GET['action'] == "download") download();
 	if ($_GET['action'] == "createdir") createdir();
 	if ($_GET['action'] == "upload") upload();
@@ -60,19 +75,28 @@ function browse() {
 	$list = $main_dir->listfiles();
 	echo "<ul>";
 
-	$upperdir = pathinfo($main_dir);
-	$up = new MyFile("");
-	$up->name = $upperdir['dirname'];
-	echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
-	
+	//Check for top-level
+	if ($main_dir != $GLOBALS['prison']) {
+		//adds "Upper Directory" entry
+		$up = new MyFile("");
+		$up->name = dirname($main_dir);
+		echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
+	}
 
+	//Print files
 	foreach ($list as $i => $value) {
 		echo($value->link());
 	}
-	if (count($list) == 1) echo '<br/><li class="browseempty_item">Folder is empty!</li><br/>';
+	//Folder is empty message
+	if (count($list) == 0) echo '<br/><li class="browseempty_item">Folder is empty!</li><br/>';
+
+	//Create Directory and upload form
 	echo $main_dir->createdir_form();
 	echo "</ul>";
 	echo $main_dir->upload_form();
+
+	//change http/https
+	changeprotocol();
 }
 function download() {
 	download_file($_GET['path']);
@@ -81,58 +105,68 @@ function download() {
 
 function upload() {
 	if (!$GLOBALS["upload_enabled"]) {
-		showerror("Upload deactivated by User.");
+		redirect("Upload deactivated by User.");
 	}
 
 	$errstr = "";
+	//loop throught uploaded files
 	for ($i = 0; $i < count($_FILES['files']['name']); $i++) {
-		var_dump($_FILES['files']['name'][$i]);
 		$dest = $_GET["path"] . DIRECTORY_SEPARATOR . $_FILES['files']['name'][$i];
+		//check if file already exists
 		if (file_exists($dest)) {
 			if (strlen($errstr) != 0) $errstr .= ", ";
 			$errstr .= $_FILES['files']['name'][$i];
 		}
 		move_uploaded_file($_FILES["files"]["tmp_name"][$i], $dest);
 	}
-	if (strlen($errstr)!=0) redirect($errstr . " exists in target directory.");
+	if (strlen($errstr)!=0) redirect("Error: " . $errstr . " exists in target directory.");
 	redirect("Upload successful");
 }
 
 //Create a Directory in the GET[path] with the given GET[dirname]
 function createdir() {
 	if (!isset($_GET['dirname'])) redirect();
+	if (strlen($_GET['dirname']) == 0) redirect("Please select the new name before submit.");
 	$newdirname = $_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname'];
-	if (file_exists($newdirname)) redirect("Directory already exists.");
+	if (file_exists($newdirname)) redirect("Error: Directory already exists.");
 	mkdir($newdirname);
 }
 
-function showerror() {
-	if (strlen($_GET['error']) == 0) return;
-	echo '<div id="errormessage">'.$_GET['error'] ."</div><br/>";
+//Show a message on top
+function showmsg() {
+	if (strlen($_GET['msg']) == 0) return;
+	echo '<div id="msg">'.$_GET['msg'] ."</div><br/>";
 }
 
-//Redirect to the browse action and adds the $errormessage to the GET-Parameters
-function redirect($errormessage) {
-	header('Location: ' . phplink() . "?action=browse&path=" . $_GET['path'] . "&error=$errormessage");
+//Redirect to the browse action and adds the $msg to the GET-Parameters
+function redirect($msg) {
+	header('Location: ' . phplink() . "?action=browse&path=" . $_GET['path'] . "&msg=$msg");
 	die();
 }
 
 function checkpw() {
 	if (!$GLOBALS['pw_protection']) return;
-	if (!isset($_COOKIE['pw'])) noaccess();
-	if ($_COOKIE['pw'] != $GLOBALS['pw']) noaccess();
-	setcookie_3d('pw', $_COOKIE['pw']);
+	if (!isset($_COOKIE['browse_pw'])) noaccess();
+	if ($_COOKIE['browse_pw'] != $GLOBALS['pw']) noaccess();
+	setcookie_3d('browse_pw', $_COOKIE['browse_pw']);
 }
 function login() {
-	if (!isset($_GET['pw'])) return;
-	setcookie_3d('pw', $_GET['pw']);
+	if (!isset($_GET['browse_pw'])) return;
+	setcookie_3d('browse_pw', $_GET['browse_pw']);
 	redirect();
 }
 function noaccess() {
-	echo "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='pw' type='input' /><input type='submit' value='Login' /></form>";
+	echo "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='input' /><input type='submit' value='Login' /></form>";
+	changeprotocol();
 	die();
 }
+function changeprotocol() {
+	//change http/https
+	$otherp = (isset($_SERVER['HTTPS']))?"http":"https";
+	echo "<br/>Change Protocol: <a id='pswitcher' href='$otherp://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"] . "?action=browse'>$otherp</a>";
+}
 
+//File class
 class MyFile {
 	public $path = null;
 	public $name = null;
@@ -189,7 +223,7 @@ class MyFile {
 		}
 	}
 	public static function phplink() {
-		return "http://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
+		return $GLOBALS['protocol'] . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
 	}
 	public function upload_form() {
 		if (!$GLOBALS["upload_enabled"]) return "Upload deactivated by User.";
@@ -226,7 +260,6 @@ class MyFile {
 	}
 }
 function download_file($path) {
-	$path = realpath($path);
 	//if (file_exists($path)) die("Target $path do not exists!");
 	if (is_dir($path)) die("Target is a directory!");
 	header('Content-Description: File Transfer');
@@ -238,6 +271,7 @@ function startsWith($haystack,$needle,$case=true) {
 	if($case){return (strcmp(substr($haystack, 0, strlen($needle)),$needle)===0);}
 	return (strcasecmp(substr($haystack, 0, strlen($needle)),$needle)===0);
 }
+//Show the content of a file on the Webpage (i don't use this anymore since download)
 function echo_file($path) {
 	$content = file_get_contents($path);
         $spec = htmlspecialchars($content);
@@ -245,7 +279,7 @@ function echo_file($path) {
         echo $out;	
 }
 function phplink() {
-	return "http://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
+	return $GLOBALS['protocol'] . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
 }
 function setcookie_3d($key, $value) {
 	setcookie($key, $value, time()+(86400 * 3)); //86400 = one day

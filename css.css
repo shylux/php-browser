@@ -1,3 +1,6 @@
+* {
+	
+}
 .browsefile_item {
 	list-style-image: url(file_icon.png);
 }
@@ -10,6 +13,8 @@
 .browseup_item {
 	list-style-image: url(up_icon.png);
 }
-#errormessage {
-	background-color: red;
+#msg {
+	border-left: 2px solid red;
+	padding-left: 2px;
+	font-weight: bold;
 }
