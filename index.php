@@ -26,6 +26,8 @@ as the name is changed.
 $prison = "/var/www/";
 $upload_enabled = true;
 $createdir_enabled = true;
+$pw_protection = true;
+$pw = "test";
 
 
 /***************************************/
@@ -36,6 +38,8 @@ if (!startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
 
 function main() {
+	if ($_GET['action'] == "login") login();
+	checkpw();
 	if (isset($_GET['error'])) showerror();
 	if ($_GET['action'] == "download") download();
 	if ($_GET['action'] == "createdir") createdir();
@@ -46,7 +50,8 @@ function main() {
 }
 
 function browse() {
-	$dir_path = (isset($_GET['path']))? $_GET['path'] : "/var/www/";
+	$dir_path = (isset($_GET['path']))? $_GET['path'] : $prison;
+	if (!file_exists($dir_path)) $dir_path = $prison;
 	$main_dir = new MyFile($dir_path);
 	$dir_handle;
 
@@ -109,6 +114,22 @@ function showerror() {
 //Redirect to the browse action and adds the $errormessage to the GET-Parameters
 function redirect($errormessage) {
 	header('Location: ' . phplink() . "?action=browse&path=" . $_GET['path'] . "&error=$errormessage");
+	die();
+}
+
+function checkpw() {
+	if (!$GLOBALS['pw_protection']) return;
+	if (!isset($_COOKIE['pw'])) noaccess();
+	if ($_COOKIE['pw'] != $GLOBALS['pw']) noaccess();
+	setcookie_3d('pw', $_COOKIE['pw']);
+}
+function login() {
+	if (!isset($_GET['pw'])) return;
+	setcookie_3d('pw', $_GET['pw']);
+	redirect();
+}
+function noaccess() {
+	echo "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='pw' type='input' /><input type='submit' value='Login' /></form>";
 	die();
 }
 
@@ -225,6 +246,9 @@ function echo_file($path) {
 }
 function phplink() {
 	return "http://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
+}
+function setcookie_3d($key, $value) {
+	setcookie($key, $value, time()+(86400 * 3)); //86400 = one day
 }
 
 //Files
