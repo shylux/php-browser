@@ -155,13 +155,14 @@ function login() {
 	setcookie_3d('browse_pw', $_GET['browse_pw']);
 	redirect();
 }
+//Displays a login screen
 function noaccess() {
-	echo "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='input' /><input type='submit' value='Login' /></form>";
+	echo $GLOBALS['head'] . "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='password' /><input type='submit' value='Login' /></form>";
 	changeprotocol();
 	die();
 }
+//Change between http and https
 function changeprotocol() {
-	//change http/https
 	$otherp = (isset($_SERVER['HTTPS']))?"http":"https";
 	echo "<br/>Change Protocol: <a id='pswitcher' href='$otherp://" . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"] . "?action=browse'>$otherp</a>";
 }
@@ -286,10 +287,10 @@ function setcookie_3d($key, $value) {
 }
 
 //Files
-//$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input name=\"uploadfile\" type=\"file\" /><input type=\"submit\" value=\"Start upload\" /></form>";
-//$head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><link rel=\"stylesheet\" type=\"text/css\" href=\"css.css\" />        <title>Browser</title></head><body>";
-$uploadform = file_get_contents("uploadform");
-$head = file_get_contents("head");
+$head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><title>Browser</title>";
+$css="* {font-family: \"Arial\";font-size: 0.98em;}.browsefile_item {list-style-image: url(file_icon.png);}.browsedir_item {list-style-image: url(folder_icon.png);}.browseempty_item {list-style-type: none;}.browseup_item {list-style-image: url(up_icon.png);}#msg {border-left: 2px solid red;padding-left: 2px;font-weight: bold;}";
+$head .= '<style type="text/css">' . $css . '</style></head><body>';
+$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input name=\"files[]\" type=\"file\" multiple=\"true\" /><input type=\"submit\" value=\"Start upload\" /></form>";
 
 //Start logic
 main();
