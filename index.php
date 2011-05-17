@@ -25,12 +25,22 @@ as the name is changed.
 
 /*************CONFIGURATION*************/
 
-$prison = "/var/www/";
+//top dir for users
+$prison = "/var/www/php-browser/";
+
 $upload_enabled = true;
 $createdir_enabled = true;
+
+//password protection
 $pw_protection = true;
 $pw = "testpassword";
+
+//the used protocol
 $protocol = (isset($_SERVER['HTTPS']))?'https://':'http://';
+
+//remove extension at upload #array entrys must be lowercase
+$cut_extension = true;
+$cut_extension_array = array("php");
 
 
 /***************************************/
@@ -70,6 +80,7 @@ function browse() {
 	$main_dir = new MyFile($dir_path);
 	$dir_handle;
 
+	//Navigation Bar
 	echo "Actual Dir: $main_dir<br/>";
 
 	$list = $main_dir->listfiles();
@@ -88,7 +99,7 @@ function browse() {
 		echo($value->link());
 	}
 	//Folder is empty message
-	if (count($list) == 0) echo '<br/><li class="browseempty_item">Folder is empty!</li><br/>';
+	if (count($list) == 0) echo '<br/><li class="browseempty_item">Directory is empty!</li><br/>';
 
 	//Create Directory and upload form
 	echo $main_dir->createdir_form();
@@ -117,6 +128,12 @@ function upload() {
 			if (strlen($errstr) != 0) $errstr .= ", ";
 			$errstr .= $_FILES['files']['name'][$i];
 		}
+
+		//remove dangerous extensions
+		if ($GLOBALS['cut_extension']) {
+			$ext = strtolower(end(explode('.', $dest)));
+			if (in_array($ext, $GLOBALS['cut_extension_array'])) $dest = substr($dest, 0, strrpos($dest, '.'));
+		}
 		move_uploaded_file($_FILES["files"]["tmp_name"][$i], $dest);
 	}
 	if (strlen($errstr)!=0) redirect("Error: " . $errstr . " exists in target directory.");
@@ -127,9 +144,12 @@ function upload() {
 function createdir() {
 	if (!isset($_GET['dirname'])) redirect();
 	if (strlen($_GET['dirname']) == 0) redirect("Please select the new name before submit.");
+	//remove slashes
+	$_GET['dirname'] = str_replace(array('/'), array(''), $_GET['dirname']);
 	$newdirname = $_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname'];
 	if (file_exists($newdirname)) redirect("Error: Directory already exists.");
 	mkdir($newdirname);
+	redirect("Directory created.");
 }
 
 //Show a message on top
@@ -157,7 +177,7 @@ function login() {
 }
 //Displays a login screen
 function noaccess() {
-	echo $GLOBALS['head'] . "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='password' /><input type='submit' value='Login' /></form>";
+	echo $GLOBALS['head'] . "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='password' /><input name='path' value='". $_GET['path'] ."' type='hidden'/><input type='submit' value='Login' /></form>";
 	changeprotocol();
 	die();
 }
@@ -236,7 +256,7 @@ class MyFile {
 	}
 	public function createdir_form() {
 		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
-		echo '<li class="browsedir_item"><form method="GET" action="'.$this->phplink().'"><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="input" /><input type="submit" value="Create Directory" /></form></li>';
+		echo '<li class="browsedir_item"><form method="GET" action="'.$this->phplink().'"><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /><input type="submit" value="Create Directory" /></form></li>';
 	}
 	public function listfiles() {
 		$dir_handle = @opendir($this);
@@ -288,9 +308,10 @@ function setcookie_3d($key, $value) {
 
 //Files
 $head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><title>Browser</title>";
-$css="* {font-family: \"Arial\";font-size: 0.98em;}.browsefile_item {list-style-image: url(file_icon.png);}.browsedir_item {list-style-image: url(folder_icon.png);}.browseempty_item {list-style-type: none;}.browseup_item {list-style-image: url(up_icon.png);}#msg {border-left: 2px solid red;padding-left: 2px;font-weight: bold;}";
-$head .= '<style type="text/css">' . $css . '</style></head><body>';
-$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input name=\"files[]\" type=\"file\" multiple=\"true\" /><input type=\"submit\" value=\"Start upload\" /></form>";
+$css=file_get_contents("css.css");
+$js=file_get_contents("func.js");
+$head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script><script type="text/javascript">' . $js . '</script></head><body>';
+$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input id=\"upload_input\" name=\"files[]\" type=\"file\" multiple=\"true\" /><input type=\"submit\" value=\"Start upload\" /></form>";
 
 //Start logic
 main();
