@@ -33,7 +33,11 @@ $createdir_enabled = true;
 
 //password protection
 $pw_protection = true;
-$pw = "testpassword";
+$user_pw = "testpassword";
+
+//admin has access to all functions
+$admin_pw = "l33t";
+$isadm = false;
 
 //the used protocol
 $protocol = (isset($_SERVER['HTTPS']))?'https://':'http://';
@@ -115,7 +119,7 @@ function download() {
 }
 
 function upload() {
-	if (!$GLOBALS["upload_enabled"]) {
+	if (!$GLOBALS["upload_enabled"] && !$isadm) {
 		redirect("Upload deactivated by User.");
 	}
 
@@ -167,7 +171,7 @@ function redirect($msg) {
 function checkpw() {
 	if (!$GLOBALS['pw_protection']) return;
 	if (!isset($_COOKIE['browse_pw'])) noaccess();
-	if ($_COOKIE['browse_pw'] != $GLOBALS['pw']) noaccess();
+	if ($_COOKIE['browse_pw'] != $GLOBALS['user_pw']) noaccess();
 	setcookie_3d('browse_pw', $_COOKIE['browse_pw']);
 }
 function login() {
@@ -247,7 +251,7 @@ class MyFile {
 		return $GLOBALS['protocol'] . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
 	}
 	public function upload_form() {
-		if (!$GLOBALS["upload_enabled"]) return "Upload deactivated by User.";
+		if (!$GLOBALS["upload_enabled"] && !$isadm) return "Upload deactivated by User.";
 		if (!is_writable($this)) return "Can't upload files because directory is not writable.";
 
 		$html = $GLOBALS["uploadform"];
