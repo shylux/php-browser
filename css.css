@@ -1,5 +1,5 @@
 * {
-	font-family: "Arial";
+	font-family: "Courier New";
 	font-size: 0.98em;
 	padding: 0;
 	margin: 0;
@@ -31,4 +31,34 @@ table {
 
 td input {
 	width: 100%;
+}
+
+#content_edit {
+	width: 100%;
+}
+.floatl {
+	float: left;
+}
+
+#col_edit {
+	width: 100px;
+}
+
+input {
+	border: none;
+	border-left: 1px solid gray;
+	border-right: 1px solid gray;
+	padding: 1px 3px;
+}
+
+input:focus {
+	background-color: #DEDEDE;
+}
+
+input:hover {
+	background-color: #EBEBEB;
+}
+
+#upload_start, #edit_cancel {
+	margin-left: 10px;
 }

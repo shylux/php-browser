@@ -27,9 +27,12 @@ as the name is changed.
 
 //top dir for users
 $prison = "/var/www/php-browser/prison";
+$prison = "/var/www";
 
 $upload_enabled = true;
 $createdir_enabled = true;
+$delete_enabled = true;
+$edit_enabled = true;
 
 //password protection
 $pw_protection = true;
@@ -77,14 +80,18 @@ function main() {
 	if ($_GET['action'] == "createfile") createfile();
 	if ($_GET['action'] == "Delete") delete();
 	if ($_GET['action'] == "upload") upload();
+	if ($_GET['action'] == "Edit") check_edit_redirect();
+	if ($_GET['action'] == "save") save();
 	echo $GLOBALS['head'];
 	if ($_GET['action'] == "browse") browse();
+	if ($_GET['action'] == "Edit") edit();
 	echo "</body></html>";
 }
 
 function browse() {
 	$dir_path = (isset($_GET['path']))? $_GET['path'] : $prison;
 	if (!file_exists($dir_path)) $dir_path = $prison;
+	if (is_file($dir_path)) $dir_path = dirname($dir_path);
 	$main_dir = new MyFile($dir_path);
 	$dir_handle;
 
@@ -100,7 +107,6 @@ function browse() {
 		$up = new MyFile("");
 		$up->name = dirname($main_dir);
 		echo '<tr><td><img src="up_icon.png" alt="" /></td><td><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></td></tr>';
-		//echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
 	}
 
 	//Print files
@@ -118,6 +124,27 @@ function browse() {
 
 	//change http/https
 	changeprotocol();
+}
+function check_edit_redirect() {
+	if (!is_file($_GET['path'])) redirect("File doesn't exists or is a directory.");
+	//if (!is_writable($_GET['path'])) redirect("File is not writable.");
+}
+function edit() {
+	echo "Edit: ".$_GET['path']."<br/><br/>";
+	echo '<form method="POST" action="'.phplink().'?action=save&amp;path='.$_GET['path'].'">';
+	echo '<textarea id="content_edit" name="content" rows="25"';
+	echo (is_writable($_GET['path']))?' >':' readonly="readonly">';
+	$c = file_get_contents($_GET['path']);
+	echo htmlspecialchars($c);
+	echo '</textarea><br/><input type="submit" name="action" value="Save" />';
+	echo '<input id="edit_cancel" type="submit" name="action" value="Cancel"/></form>';
+}
+function save() {
+	if ($_POST["action"] != "Save") redirect("Edit cancelled.");
+	$filehandler = fopen($_GET['path'], 'w') or redirect("Can't open file for writing.");
+	fwrite($filehandler, $_POST['content']);
+	fclose($filehandler);
+	redirect("File saved.");
 }
 function download() {
 	download_file($_GET['path']);
@@ -285,8 +312,18 @@ class MyFile {
 	}
 	public function link() {
 		$f = ($this->isFile())?'file':'folder';
-		//return '<li class="browse' . $f . '_item"><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
-		return '<tr><td><img src="' . $f . '_icon.png" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td><td><form><input type="hidden" name="del_path" value="'.$this.'" /><input type="hidden" name="path" value="'.$this->parent().'" /><input type="submit" name="action" value="Delete" /></form></td></tr>';
+		$r = '<tr><td><img src="' . $f . '_icon.png" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td>';
+		//Delete Button
+		if ($GLOBALS['delete_enabled'] && is_writable($this)) {
+			$r.= '<td><form><input type="hidden" name="del_path" value="'.$this.'" /><input type="hidden" name="path" value="'.$this->parent().'" /><input type="submit" name="action" value="Delete" /></form></td>';
+		} else {
+			$r.='<td></td>';
+		}
+		if ($GLOBALS['edit_enabled'] && $this->isFile()) {
+			$r.= '<td id="col_edit"><form><input type="hidden" name="path" value="'.$this.'" /><input type="submit" name="action" value="Edit" /></form></td>';
+		}
+		$r.="</tr>";
+		return $r;
 	}
 	public function httplink_html() {
 		if ($this->isFile()) {
@@ -308,11 +345,11 @@ class MyFile {
 	}
 	public function createdir_form() {
 		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
-		echo '<form method="GET" action="'.$this->phplink().'"><tr><td><img src="folder_icon.png" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></tr></form>';
+		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="folder_icon.png" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></form><td></td></tr>';
 	}
 	public function createfile_form() {
 		if (!$GLOBALS["upload_enabled"] || !is_writable($this)) return;
-		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="file_icon.png" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form></tr>';
+		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="file_icon.png" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form><td></td></tr>';
 	}
 
 	public function listfiles() {
@@ -374,7 +411,7 @@ $head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"te
 $css=file_get_contents("css.css");
 $js=file_get_contents("func.js");
 $head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script><script type="text/javascript">' . $js . '</script></head><body>';
-$uploadform="<form enctype=\"multipart/form-data\" action=\"[[uploadactiontarget]]\" method=\"POST\">Upload a File:<input id=\"upload_input\" name=\"files[]\" type=\"file\" multiple=\"true\" /><input type=\"submit\" value=\"Start upload\" /></form>";
+$uploadform=file_get_contents("uploadform");
 
 //Start logic
 main();
