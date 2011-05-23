@@ -1,21 +1,34 @@
 * {
 	font-family: "Arial";
 	font-size: 0.98em;
+	padding: 0;
+	margin: 0;
 }
-.browsefile_item {
-	list-style-image: url(file_icon.png);
+
+body {
+	margin: 5px;
 }
-.browsedir_item {
-	list-style-image: url(folder_icon.png);
-}
-.browseempty_item {
-	list-style-type: none;
-}
-.browseup_item {
-	list-style-image: url(up_icon.png);
-}
+
 #msg {
 	border-left: 2px solid red;
 	padding-left: 2px;
 	font-weight: bold;
+}
+
+td img {
+	height: 12px;
+}
+
+td {
+	padding-right: 5px;
+	height: 12px;
+}
+
+table {
+	margin-left: 40px;
+	margin-bottom: 20px;
+}
+
+td input {
+	width: 100%;
 }

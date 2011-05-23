@@ -26,7 +26,7 @@ as the name is changed.
 /*************CONFIGURATION*************/
 
 //top dir for users
-$prison = "/var/www/php-browser/";
+$prison = "/var/www/php-browser/prison";
 
 $upload_enabled = true;
 $createdir_enabled = true;
@@ -46,6 +46,8 @@ $protocol = (isset($_SERVER['HTTPS']))?'https://':'http://';
 $cut_extension = true;
 $cut_extension_array = array("php");
 
+//Contact email
+$contact_email = "shylux@gmail.com";
 
 /***************************************/
 
@@ -72,6 +74,8 @@ function main() {
 	if (isset($_GET['msg'])) showmsg();
 	if ($_GET['action'] == "download") download();
 	if ($_GET['action'] == "createdir") createdir();
+	if ($_GET['action'] == "createfile") createfile();
+	if ($_GET['action'] == "Delete") delete();
 	if ($_GET['action'] == "upload") upload();
 	echo $GLOBALS['head'];
 	if ($_GET['action'] == "browse") browse();
@@ -88,14 +92,15 @@ function browse() {
 	echo "Actual Dir: $main_dir<br/>";
 
 	$list = $main_dir->listfiles();
-	echo "<ul>";
+	echo "<table>";
 
 	//Check for top-level
 	if ($main_dir != $GLOBALS['prison']) {
 		//adds "Upper Directory" entry
 		$up = new MyFile("");
 		$up->name = dirname($main_dir);
-		echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
+		echo '<tr><td><img src="up_icon.png" alt="" /></td><td><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></td></tr>';
+		//echo '<li class="browseup_item"><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></li>';
 	}
 
 	//Print files
@@ -103,11 +108,12 @@ function browse() {
 		echo($value->link());
 	}
 	//Folder is empty message
-	if (count($list) == 0) echo '<br/><li class="browseempty_item">Directory is empty!</li><br/>';
+	if (count($list) == 0) echo '<tr><td></td></tr><tr id="item_empty"><td></td><td>Directory is empty!</td></tr><tr><td></td></tr>';
 
 	//Create Directory and upload form
 	echo $main_dir->createdir_form();
-	echo "</ul>";
+	echo $main_dir->createfile_form();
+	echo "</table>";
 	echo $main_dir->upload_form();
 
 	//change http/https
@@ -151,10 +157,54 @@ function createdir() {
 	//remove slashes
 	$_GET['dirname'] = str_replace(array('/'), array(''), $_GET['dirname']);
 	$newdirname = $_GET['path']. DIRECTORY_SEPARATOR . $_GET['dirname'];
-	if (file_exists($newdirname)) redirect("Error: Directory already exists.");
+	if (file_exists($newdirname)) redirect("Error: Entity already exists.");
 	mkdir($newdirname);
 	redirect("Directory created.");
 }
+
+//Create a File in the GET[path] with the given GET[filename]
+function createfile() {
+	if (!isset($_GET['filename'])) redirect();
+	if (strlen($_GET['filename']) == 0) redirect("Please select the new name before submit.");
+	//remove slashes
+	$_GET['filename'] = str_replace(array('/'), array(''), $_GET['filename']);
+	$newfilename = $_GET['path']. DIRECTORY_SEPARATOR . $_GET['filename'];
+	if (file_exists($newfilename)) redirect("Error: Entity already exists.");
+	touch($newfilename);
+	redirect("File created.");
+}
+
+//Delete the File given in GET[path] !!! Be careful!
+function delete() {
+	if ($_GET['del_path'] == $GLOBALS['prison']) redirect();
+	if (!isset($_GET['del_path'])) redirect();
+	if (!file_exists($_GET['del_path'])) redirect("Can't find File.");
+	if (!is_writable($_GET['del_path'])) redirect("Not enough permission on server.");
+	if (!is_dir($_GET['del_path'])) {
+		if (!unlink($_GET['del_path'])) redirect("Unhandled Error.. Contact me: ".$GLOBALS["contact_email"]);
+	} else {
+		if(!delete_directory($_GET['del_path'])) redirect("Unhandled Error.. Contact me: ".$GLOBALS["contact_email"]);
+	}
+	redirect("Entity deleted.");
+}
+function delete_directory($dirname) {
+	if (is_dir($dirname)) $dir_handle = opendir($dirname);
+	if (!$dir_handle) return false;
+	while($file = readdir($dir_handle)) {
+		if ($file == "." || $file == "..") continue;
+		var_dump($file);
+		echo "<br/>";
+		if (!is_dir($dirname."/".$file)) {
+			unlink($dirname."/".$file);
+		} else {
+			delete_directory($dirname.'/'.$file);
+		}
+	}
+	closedir($dir_handle);
+	rmdir($dirname);
+	return true;
+}
+ 
 
 //Show a message on top
 function showmsg() {
@@ -234,11 +284,9 @@ class MyFile {
 		}
 	}
 	public function link() {
-		if ($this->isFile()) {
-			return '<li class="browsefile_item"><a class="browsefile" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
-		} else {
-			return '<li class="browsedir_item"><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
-		}
+		$f = ($this->isFile())?'file':'folder';
+		//return '<li class="browse' . $f . '_item"><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></li>';
+		return '<tr><td><img src="' . $f . '_icon.png" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td><td><form><input type="hidden" name="del_path" value="'.$this.'" /><input type="hidden" name="path" value="'.$this->parent().'" /><input type="submit" name="action" value="Delete" /></form></td></tr>';
 	}
 	public function httplink_html() {
 		if ($this->isFile()) {
@@ -260,8 +308,13 @@ class MyFile {
 	}
 	public function createdir_form() {
 		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
-		echo '<li class="browsedir_item"><form method="GET" action="'.$this->phplink().'"><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /><input type="submit" value="Create Directory" /></form></li>';
+		echo '<form method="GET" action="'.$this->phplink().'"><tr><td><img src="folder_icon.png" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></tr></form>';
 	}
+	public function createfile_form() {
+		if (!$GLOBALS["upload_enabled"] || !is_writable($this)) return;
+		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="file_icon.png" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form></tr>';
+	}
+
 	public function listfiles() {
 		$dir_handle = @opendir($this);
 		$counter = 0;
@@ -280,10 +333,16 @@ class MyFile {
 		}
 		return $rearrinfo;
 	}
+	public function parent() {
+		return dirname($this);	
+	}
 	public function __get($att) {
 		return $this->$att;
 	}
 }
+
+
+
 function download_file($path) {
 	//if (file_exists($path)) die("Target $path do not exists!");
 	if (is_dir($path)) die("Target is a directory!");
