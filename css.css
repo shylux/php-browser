@@ -31,10 +31,12 @@ table {
 
 td input {
 	width: 100%;
+	margin-right: 10px;
 }
 
 #content_edit {
-	width: 100%;
+	/*width: 100%;*/
+	/*display: none;*/
 }
 .floatl {
 	float: left;
@@ -61,4 +63,19 @@ input:hover {
 
 #upload_start, #edit_cancel {
 	margin-left: 10px;
+}
+
+#edit_form {
+	width: 100%;
+	float: left;
+}
+#edit_info {
+	margin-right: 10px;
+	float: left;
+}
+
+.CodeMirror {
+	clear: left;
+	margin-top: 10px;
+	border: 1px solid black;
 }

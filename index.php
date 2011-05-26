@@ -27,7 +27,7 @@ as the name is changed.
 
 //top dir for users
 $prison = "/var/www/php-browser/prison";
-$prison = "/var/www";
+#$prison = "/var/www";
 
 $upload_enabled = true;
 $createdir_enabled = true;
@@ -130,14 +130,16 @@ function check_edit_redirect() {
 	//if (!is_writable($_GET['path'])) redirect("File is not writable.");
 }
 function edit() {
-	echo "Edit: ".$_GET['path']."<br/><br/>";
-	echo '<form method="POST" action="'.phplink().'?action=save&amp;path='.$_GET['path'].'">';
+	echo '<script type="text/javascript">' . $GLOBALS['editjs'] . '</script>';
+	echo '<form id="edit_form" method="POST" action="'.phplink().'?action=save&amp;path='.$_GET['path'].'">';
+	echo '<div id="edit_info">Edit: '.$_GET['path']."</div>";
+	echo '<input type="submit" name="action" value="Save" /><input id="edit_cancel" type="submit" name="action" value="Cancel"/>';
 	echo '<textarea id="content_edit" name="content" rows="25"';
 	echo (is_writable($_GET['path']))?' >':' readonly="readonly">';
 	$c = file_get_contents($_GET['path']);
 	echo htmlspecialchars($c);
-	echo '</textarea><br/><input type="submit" name="action" value="Save" />';
-	echo '<input id="edit_cancel" type="submit" name="action" value="Cancel"/></form>';
+	echo '</textarea>';
+	echo '</form><br/>';
 }
 function save() {
 	if ($_POST["action"] != "Save") redirect("Edit cancelled.");
@@ -407,10 +409,10 @@ function setcookie_3d($key, $value) {
 }
 
 //Files
-$head="<!DOCTYPE html><html><head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />        <link rel=\"icon\" href=\"favicon.ico\" type=\"image/vnd.microsoft.icon\" /><link rel=\"shortcut icon\" href=\"folder_icon.png\" type=\"image/x-icon\" /><title>Browser</title>";
+$head=file_get_contents("head");
 $css=file_get_contents("css.css");
-$js=file_get_contents("func.js");
-$head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script><script type="text/javascript">' . $js . '</script></head><body>';
+$editjs=file_get_contents("edit.js");
+$head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script></head><body>';
 $uploadform=file_get_contents("uploadform");
 
 //Start logic
