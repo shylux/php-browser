@@ -26,8 +26,8 @@ as the name is changed.
 /*************CONFIGURATION*************/
 
 //top dir for users
+$prison_enabled = false;
 $prison = "/var/www/php-browser/prison";
-#$prison = "/var/www";
 
 $upload_enabled = true;
 $createdir_enabled = true;
@@ -52,6 +52,9 @@ $cut_extension_array = array("php");
 //Contact email
 $contact_email = "shylux@gmail.com";
 
+//CodeMirror
+$codemirror_enabled = false;
+
 /***************************************/
 
 /*****************UPLOAD*****************
@@ -68,7 +71,7 @@ max_execution_time = 300 (time available for upload in seconds. remeber that oth
 //Set up vars
 $prison = realpath($prison);
 $_GET['path'] = (isset($_GET['path'])) ? realpath($_GET['path']) : $prison;
-if (!startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
+if ($prison_enabled && !startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
 
 function main() {
@@ -102,11 +105,11 @@ function browse() {
 	echo "<table>";
 
 	//Check for top-level
-	if ($main_dir != $GLOBALS['prison']) {
+	if (!$GLOBALS['prison_enabled'] || $main_dir != $GLOBALS['prison']) {
 		//adds "Upper Directory" entry
 		$up = new MyFile("");
 		$up->name = dirname($main_dir);
-		echo '<tr><td><img src="up_icon.png" alt="" /></td><td><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></td></tr>';
+		echo '<tr><td><img src="'.$GLOBALS['up_icon'].'" alt="" /></td><td><a class="browseup" href="' . $up->httplink_html() . '">Upper Directory</a></td></tr>';
 	}
 
 	//Print files
@@ -130,10 +133,12 @@ function check_edit_redirect() {
 	//if (!is_writable($_GET['path'])) redirect("File is not writable.");
 }
 function edit() {
-	echo '<script type="text/javascript">' . $GLOBALS['editjs'] . '</script>';
+	if ($GLOBALS['codemirror_enabled']) {
+		echo '<script type="text/javascript">' . $GLOBALS['editjs'] . '</script>';
+	}
 	echo '<form id="edit_form" method="POST" action="'.phplink().'?action=save&amp;path='.$_GET['path'].'">';
 	echo '<div id="edit_info">Edit: '.$_GET['path']."</div>";
-	echo '<input type="submit" name="action" value="Save" /><input id="edit_cancel" type="submit" name="action" value="Cancel"/>';
+	echo '<input id="edit_save" type="submit" name="action" value="Save" /><input id="edit_cancel" type="submit" name="action" value="Cancel"/>';
 	echo '<textarea id="content_edit" name="content" rows="25"';
 	echo (is_writable($_GET['path']))?' >':' readonly="readonly">';
 	$c = file_get_contents($_GET['path']);
@@ -154,7 +159,7 @@ function download() {
 }
 
 function upload() {
-	if (!$GLOBALS["upload_enabled"] && !$isadm) {
+	if (!$GLOBALS["upload_enabled"] && !$GLOBALS['isadm']) {
 		redirect("Upload deactivated by User.");
 	}
 
@@ -205,7 +210,6 @@ function createfile() {
 
 //Delete the File given in GET[path] !!! Be careful!
 function delete() {
-	if ($_GET['del_path'] == $GLOBALS['prison']) redirect();
 	if (!isset($_GET['del_path'])) redirect();
 	if (!file_exists($_GET['del_path'])) redirect("Can't find File.");
 	if (!is_writable($_GET['del_path'])) redirect("Not enough permission on server.");
@@ -314,7 +318,8 @@ class MyFile {
 	}
 	public function link() {
 		$f = ($this->isFile())?'file':'folder';
-		$r = '<tr><td><img src="' . $f . '_icon.png" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td>';
+		$pic = ($this->isFile())?$GLOBALS['file_icon']:$GLOBALS['folder_icon'];
+		$r = '<tr><td><img src="' . $pic . '" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td>';
 		//Delete Button
 		if ($GLOBALS['delete_enabled'] && is_writable($this)) {
 			$r.= '<td><form><input type="hidden" name="del_path" value="'.$this.'" /><input type="hidden" name="path" value="'.$this->parent().'" /><input type="submit" name="action" value="Delete" /></form></td>';
@@ -338,7 +343,7 @@ class MyFile {
 		return $GLOBALS['protocol'] . $_SERVER["SERVER_NAME"] . $_SERVER["SCRIPT_NAME"];
 	}
 	public function upload_form() {
-		if (!$GLOBALS["upload_enabled"] && !$isadm) return "Upload deactivated by User.";
+		if (!$GLOBALS["upload_enabled"] && !$GLOBALS['isadm']) return "Upload deactivated by User.";
 		if (!is_writable($this)) return "Can't upload files because directory is not writable.";
 
 		$html = $GLOBALS["uploadform"];
@@ -347,11 +352,11 @@ class MyFile {
 	}
 	public function createdir_form() {
 		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
-		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="folder_icon.png" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></form><td></td></tr>';
+		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="'.$GLOBALS['folder_icon'].'" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></form><td></td></tr>';
 	}
 	public function createfile_form() {
 		if (!$GLOBALS["upload_enabled"] || !is_writable($this)) return;
-		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="file_icon.png" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form><td></td></tr>';
+		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="'.$GLOBALS['file_icon'].'" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form><td></td></tr>';
 	}
 
 	public function listfiles() {
@@ -411,9 +416,12 @@ function setcookie_3d($key, $value) {
 //Files
 $head=file_get_contents("head");
 $css=file_get_contents("css.css");
-$editjs=file_get_contents("edit.js");
+if ($codemirror_enabled) $editjs = file_get_contents("edit.js");
 $head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script></head><body>';
-$uploadform=file_get_contents("uploadform");
+if ($upload_enabled) $uploadform=file_get_contents("uploadform");
+$file_icon = (file_exists("file_icon.png"))? "file_icon.png" : "http://www.abload.de/img/file_icong8ie.png";
+$folder_icon = (file_exists("folder_icon.png"))? "folder_icon.png" : "http://www.abload.de/img/folder_icon68fb.png";
+$up_icon = (file_exists("up_icon.png"))? "up_icon.png" : "http://www.abload.de/img/up_iconrjhx.png";
 
 //Start logic
 main();

@@ -35,10 +35,11 @@ td input {
 }
 
 #content_edit {
-	/*width: 100%;*/
-	/*display: none;*/
+	clear: left;
+	margin-top: 10px;
+	width: 100%;
 }
-.floatl {
+#edit_cancel, #edit_save {
 	float: left;
 }
 
