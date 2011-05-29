@@ -36,7 +36,6 @@ td input {
 
 #content_edit {
 	clear: left;
-	margin-top: 10px;
 	width: 100%;
 }
 #edit_cancel, #edit_save {
@@ -62,8 +61,12 @@ input:hover {
 	background-color: #EBEBEB;
 }
 
+input:disabled {
+	display: none;
+}
+
 #upload_start, #edit_cancel {
-	margin-left: 10px;
+	margin: 0 10px;
 }
 
 #edit_form {
@@ -72,11 +75,11 @@ input:hover {
 }
 #edit_info {
 	margin-right: 10px;
+	margin-bottom: 10px;
 	float: left;
 }
 
 .CodeMirror {
 	clear: left;
-	margin-top: 10px;
 	border: 1px solid black;
 }

@@ -136,11 +136,14 @@ function edit() {
 	if ($GLOBALS['codemirror_enabled']) {
 		echo '<script type="text/javascript">' . $GLOBALS['editjs'] . '</script>';
 	}
-	echo '<form id="edit_form" method="POST" action="'.phplink().'?action=save&amp;path='.$_GET['path'].'">';
-	echo '<div id="edit_info">Edit: '.$_GET['path']."</div>";
-	echo '<input id="edit_save" type="submit" name="action" value="Save" /><input id="edit_cancel" type="submit" name="action" value="Cancel"/>';
+	$f = new MyFile($_GET['path']);
+	echo '<form id="edit_form" method="POST" action="'.phplink().'?action=save&amp;path='.$f.'">';
+	echo '<div id="edit_info">Edit: '.$f."</div>";
+	$dis = ($f->isWritable())?"":" disabled=true";
+	echo '<input id="edit_save" type="submit" name="action" value="Save"'.$dis.' /><input id="edit_cancel" type="submit" name="action" value="Cancel"/>';
+	echo ($f->isWritable())?"":"File is not writable.";
 	echo '<textarea id="content_edit" name="content" rows="25"';
-	echo (is_writable($_GET['path']))?' >':' readonly="readonly">';
+	echo ($f->isWritable())?' >':' readonly="readonly">';
 	$c = file_get_contents($_GET['path']);
 	echo htmlspecialchars($c);
 	echo '</textarea>';
@@ -296,6 +299,9 @@ class MyFile {
 		$re = realpath($re);
                 return $re;
 	} 
+	public function isWritable() {
+		return (is_writable($this)) ? true : false;
+	}
 	public function isFile() {
 		return (is_file($this)) ? true : false;
 	}
@@ -417,11 +423,13 @@ function setcookie_3d($key, $value) {
 $head=file_get_contents("head");
 $css=file_get_contents("css.css");
 if ($codemirror_enabled) $editjs = file_get_contents("edit.js");
-$head .= '<style type="text/css">' . $css . '</style><script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script></head><body>';
+$head .= '<style type="text/css">' . $css . '</style></head><body>';
 if ($upload_enabled) $uploadform=file_get_contents("uploadform");
 $file_icon = (file_exists("file_icon.png"))? "file_icon.png" : "http://www.abload.de/img/file_icong8ie.png";
 $folder_icon = (file_exists("folder_icon.png"))? "folder_icon.png" : "http://www.abload.de/img/folder_icon68fb.png";
 $up_icon = (file_exists("up_icon.png"))? "up_icon.png" : "http://www.abload.de/img/up_iconrjhx.png";
+$codemirror_head = ($codemirror_enabled) ? file_get_contents('codemirror') : '';
+$head = str_replace(array('[[favicon]]', '[[codemirror]]'), array($folder_icon, $codemirror_head), $head);
 
 //Start logic
 main();
