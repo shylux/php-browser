@@ -29,16 +29,17 @@ as the name is changed.
 $prison_enabled = false;
 $prison = "/var/www/php-browser/prison";
 
-$upload_enabled = true;
-$createdir_enabled = true;
-$delete_enabled = true;
-$edit_enabled = true;
+//Settings for normal users
+$upload_enabled = false;
+$createdir_enabled = false;
+$delete_enabled = false;
+$edit_enabled = false;
 
 //password protection
 $pw_protection = true;
 $user_pw = "testpassword";
 
-//admin has access to all functions
+//admin has access to all features
 $admin_pw = "l33t";
 $isadm = false;
 
@@ -68,13 +69,18 @@ max_execution_time = 300 (time available for upload in seconds. remeber that oth
 
 ****************************************/
 
-//Set up vars
+//Check path
 $prison = realpath($prison);
 $_GET['path'] = (isset($_GET['path'])) ? realpath($_GET['path']) : $prison;
 if ($prison_enabled && !startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
+//Check action
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
+//Check for Admin
+if (isset($_COOKIE['browse_pw'])) if ($_COOKIE['browse_pw'] == $GLOBALS['admin_pw']) $GLOBALS['isadm'] = true;
 
 function main() {
+	if ($_GET['action'] == "flogin") noaccess();
+	if ($_GET['action'] == "logout") logout();
 	if ($_GET['action'] == "login") login();
 	checkpw();
 	if (isset($_GET['msg'])) showmsg();
@@ -177,7 +183,7 @@ function upload() {
 		}
 
 		//remove dangerous extensions
-		if ($GLOBALS['cut_extension']) {
+		if ($GLOBALS['cut_extension'] && !$GLOBALS['isadm']) {
 			$ext = strtolower(end(explode('.', $dest)));
 			if (in_array($ext, $GLOBALS['cut_extension_array'])) $dest = substr($dest, 0, strrpos($dest, '.'));
 		}
@@ -255,19 +261,26 @@ function redirect($msg) {
 }
 
 function checkpw() {
+	$GLOBALS['head'] .= $GLOBALS['login_form'];
 	if (!$GLOBALS['pw_protection']) return;
 	if (!isset($_COOKIE['browse_pw'])) noaccess();
-	if ($_COOKIE['browse_pw'] != $GLOBALS['user_pw']) noaccess();
+	if ($_COOKIE['browse_pw'] != $GLOBALS['user_pw'] && $_COOKIE['browse_pw'] != $GLOBALS['admin_pw']) noaccess();
 	setcookie_3d('browse_pw', $_COOKIE['browse_pw']);
+	$GLOBALS['head'] .= $GLOBALS['logout_form'];
 }
 function login() {
 	if (!isset($_GET['browse_pw'])) return;
 	setcookie_3d('browse_pw', $_GET['browse_pw']);
 	redirect();
 }
+function logout() {
+	delcookie('browse_pw');	
+	redirect();
+}
+
 //Displays a login screen
 function noaccess() {
-	echo $GLOBALS['head'] . "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input name='browse_pw' type='password' /><input name='path' value='". $_GET['path'] ."' type='hidden'/><input type='submit' value='Login' /></form>";
+	echo $GLOBALS['head'] . "Password protected area.</br><form action='" . phplink() . "' type='GET'><input name='action' value='login' type='hidden'/><input id=login_form_pw name='browse_pw' type='password' /><input name='path' value='". $_GET['path'] ."' type='hidden'/><input type='submit' value='Login' /></form>";
 	changeprotocol();
 	die();
 }
@@ -327,12 +340,12 @@ class MyFile {
 		$pic = ($this->isFile())?$GLOBALS['file_icon']:$GLOBALS['folder_icon'];
 		$r = '<tr><td><img src="' . $pic . '" alt="'.$f.'" /></td><td><a class="browsedir" href="' . $this->httplink_html() . "\">" . $this->getName() . '</a></td>';
 		//Delete Button
-		if ($GLOBALS['delete_enabled'] && is_writable($this)) {
+		if (($GLOBALS['delete_enabled'] || $GLOBALS['isadm']) && is_writable($this)) {
 			$r.= '<td><form><input type="hidden" name="del_path" value="'.$this.'" /><input type="hidden" name="path" value="'.$this->parent().'" /><input type="submit" name="action" value="Delete" /></form></td>';
 		} else {
 			$r.='<td></td>';
 		}
-		if ($GLOBALS['edit_enabled'] && $this->isFile()) {
+		if (($GLOBALS['edit_enabled'] || $GLOBALS['isadm']) && $this->isFile()) {
 			$r.= '<td id="col_edit"><form><input type="hidden" name="path" value="'.$this.'" /><input type="submit" name="action" value="Edit" /></form></td>';
 		}
 		$r.="</tr>";
@@ -357,11 +370,11 @@ class MyFile {
 		return $html;
 	}
 	public function createdir_form() {
-		if (!$GLOBALS["createdir_enabled"] || !is_writable($this)) return;
+		if (!$GLOBALS["createdir_enabled"] && !$GLOBALS['isadm'] || !is_writable($this)) return;
 		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="'.$GLOBALS['folder_icon'].'" alt="" /></td><td><input name="action" value="createdir" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="dirname" type="text" /></td><td><input type="submit" value="Create Directory" /></td></form><td></td></tr>';
 	}
 	public function createfile_form() {
-		if (!$GLOBALS["upload_enabled"] || !is_writable($this)) return;
+		if (!$GLOBALS["upload_enabled"] && !$GLOBALS['isadm'] || !is_writable($this)) return;
 		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="'.$GLOBALS['file_icon'].'" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form><td></td></tr>';
 	}
 
@@ -418,13 +431,18 @@ function phplink() {
 function setcookie_3d($key, $value) {
 	setcookie($key, $value, time()+(86400 * 3)); //86400 = one day
 }
+function delcookie($key) {
+	setcookie($key);
+}
 
 //Files
 $head=file_get_contents("head");
 $css=file_get_contents("css.css");
+$logout_form = '<form id="logout_form" action="'.phplink().'"><input type="hidden" name="action" value="logout" /><input type="submit" value="Logout" /></form>';
+$login_form = '<form id="login_form" actin="'.phplink().'"><input type="hidden" name="action" value="flogin" /><input type="submit" value="Login" /></form>';
 if ($codemirror_enabled) $editjs = file_get_contents("edit.js");
 $head .= '<style type="text/css">' . $css . '</style></head><body>';
-if ($upload_enabled) $uploadform=file_get_contents("uploadform");
+if ($upload_enabled || $GLOBALS['isadm']) $uploadform=file_get_contents("uploadform");
 $file_icon = (file_exists("file_icon.png"))? "file_icon.png" : "http://www.abload.de/img/file_icong8ie.png";
 $folder_icon = (file_exists("folder_icon.png"))? "folder_icon.png" : "http://www.abload.de/img/folder_icon68fb.png";
 $up_icon = (file_exists("up_icon.png"))? "up_icon.png" : "http://www.abload.de/img/up_iconrjhx.png";

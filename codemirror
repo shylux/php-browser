@@ -1,0 +1,5 @@
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.6.js"></script>
+<script src="CodeMirror/lib/codemirror.js"></script>
+<link rel="stylesheet" href="CodeMirror/lib/codemirror.css">
+<script src="CodeMirror/mode/javascript/javascript.js"></script>
+<link rel="stylesheet" href="CodeMirror/mode/javascript/javascript.css">

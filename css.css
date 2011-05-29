@@ -14,6 +14,13 @@ body {
 	padding-left: 2px;
 	font-weight: bold;
 }
+#logout_form, #login_form {
+	float: right;
+	margin-left: 10px;
+}
+#login_form_pw {
+	margin-right: 10px;
+}
 
 td img {
 	height: 12px;
@@ -30,8 +37,7 @@ table {
 }
 
 td input {
-	width: 100%;
-	margin-right: 10px;
+	width: 95%;
 }
 
 #content_edit {
