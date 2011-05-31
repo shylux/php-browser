@@ -77,7 +77,6 @@ input:disabled {
 
 #edit_form {
 	width: 100%;
-	float: left;
 }
 #edit_info {
 	margin-right: 10px;
@@ -88,4 +87,10 @@ input:disabled {
 .CodeMirror {
 	clear: left;
 	border: 1px solid black;
+	height: auto;
+	max-height: 800px;
+}
+
+.syn_change {
+	margin-right: 10px;
 }

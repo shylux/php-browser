@@ -54,7 +54,7 @@ $cut_extension_array = array("php");
 $contact_email = "shylux@gmail.com";
 
 //CodeMirror
-$codemirror_enabled = false;
+$codemirror_enabled = true;
 
 /***************************************/
 
@@ -154,6 +154,7 @@ function edit() {
 	echo htmlspecialchars($c);
 	echo '</textarea>';
 	echo '</form><br/>';
+	echo '<input id="php" class="syn_change" type="submit" value="PHP" /><input id="javascript" class="syn_change" type="submit" value="Javascript" /><input id="htmlmixed" class="syn_change" type="submit" value="HTML" /><input id="css" class="syn_change" type="submit" value="CSS" /><input id="xml" class="syn_change" type="submit" value="XML" /><input id="text/x-csrc" class="syn_change" type="submit" value="C" /><input id="python" class="syn_change" type="submit" value="Python" />';
 }
 function save() {
 	if ($_POST["action"] != "Save") redirect("Edit cancelled.");
