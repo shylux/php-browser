@@ -26,7 +26,7 @@ as the name is changed.
 /*************CONFIGURATION*************/
 
 //top dir for users
-$prison_enabled = false;
+$prison_enabled = true;
 $prison = "/var/www/php-browser/prison";
 
 //Settings for normal users
@@ -36,11 +36,11 @@ $delete_enabled = false;
 $edit_enabled = false;
 
 //password protection
-$pw_protection = true;
-$user_pw = "testpassword";
+$pw_protection = false;
+$user_pw = "fu";
 
 //admin has access to all features
-$admin_pw = "l33t";
+$admin_pw = "lala";
 $isadm = false;
 
 //the used protocol
@@ -69,14 +69,14 @@ max_execution_time = 300 (time available for upload in seconds. remeber that oth
 
 ****************************************/
 
+//Check for Admin
+if (isset($_COOKIE['browse_pw'])) if ($_COOKIE['browse_pw'] == $GLOBALS['admin_pw']) $GLOBALS['isadm'] = true;
 //Check path
 $prison = realpath($prison);
 $_GET['path'] = (isset($_GET['path'])) ? realpath($_GET['path']) : $prison;
-if ($prison_enabled && !startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
+if (!$GLOBALS['isadm'] && $prison_enabled && !startsWith($_GET['path'], $prison, true)) $_GET['path'] = $prison;
 //Check action
 if (!isset($_GET['action'])) $_GET['action'] = "browse";
-//Check for Admin
-if (isset($_COOKIE['browse_pw'])) if ($_COOKIE['browse_pw'] == $GLOBALS['admin_pw']) $GLOBALS['isadm'] = true;
 
 function main() {
 	if ($_GET['action'] == "flogin") noaccess();
@@ -111,7 +111,7 @@ function browse() {
 	echo "<table>";
 
 	//Check for top-level
-	if (!$GLOBALS['prison_enabled'] || $main_dir != $GLOBALS['prison']) {
+	if ($GLOBALS['isadm'] || !$GLOBALS['prison_enabled'] || $main_dir != $GLOBALS['prison']) {
 		//adds "Upper Directory" entry
 		$up = new MyFile("");
 		$up->name = dirname($main_dir);
@@ -448,6 +448,7 @@ $file_icon = (file_exists("file_icon.png"))? "file_icon.png" : "http://www.abloa
 $folder_icon = (file_exists("folder_icon.png"))? "folder_icon.png" : "http://www.abload.de/img/folder_icon68fb.png";
 $up_icon = (file_exists("up_icon.png"))? "up_icon.png" : "http://www.abload.de/img/up_iconrjhx.png";
 $codemirror_head = ($codemirror_enabled) ? file_get_contents('codemirror') : '';
+$codemirror_head = (file_exists('CodeMirror2')) ? $codemirror_head : str_replace('CodeMirror2', 'http://codemirror.net', $codemirror_head);
 $head = str_replace(array('[[favicon]]', '[[codemirror]]'), array($folder_icon, $codemirror_head), $head);
 
 //Start logic
