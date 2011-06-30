@@ -1,7 +1,6 @@
 $(document).ready(function() {
-	var content_edit = document.getElementById('content_edit')
-	var myCodeMirror = CodeMirror.fromTextArea(content_edit, getconf("text/stex"));
-	//myCodeMirror.setOption('mode', 'php');
+	content_edit = document.getElementById('content_edit');
+	myCodeMirror = CodeMirror.fromTextArea(content_edit, getconf("text/stex"));
 	$('.syn_change').bind('click', function(){
 		myCodeMirror.setOption('mode', $(this).attr('id'));
 	});
@@ -19,10 +18,6 @@ function getconf(mode) {
 }
 
 var supported_modes = new Array("text/x-csrc", "javascript", "php", "css", "htmlmixed", "xml");
-
-$('.syn_change').bind('click', function(){
-	alert("Click");
-});
 
 /*
 

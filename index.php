@@ -31,16 +31,20 @@ $prison = "/var/www/php-browser/prison";
 
 //Settings for normal users
 $upload_enabled = false;
-$createdir_enabled = false;
+$createdir_enabled = true;
 $delete_enabled = false;
-$edit_enabled = false;
+$edit_enabled = true;
+
+//Generates a http link
+$genlink_enabled = true;
+$webserver_root = "/var/www";
 
 //password protection
-$pw_protection = false;
+$pw_protection = true;
 $user_pw = "fu";
 
 //admin has access to all features
-$admin_pw = "lala";
+$admin_pw = "asdffdsa";
 $isadm = false;
 
 //the used protocol
@@ -80,7 +84,6 @@ if (!isset($_GET['action'])) $_GET['action'] = "browse";
 
 function main() {
 	if ($_GET['action'] == "flogin") noaccess();
-	if ($_GET['action'] == "logout") logout();
 	if ($_GET['action'] == "login") login();
 	checkpw();
 	if (isset($_GET['msg'])) showmsg();
@@ -103,6 +106,9 @@ function browse() {
 	if (is_file($dir_path)) $dir_path = dirname($dir_path);
 	$main_dir = new MyFile($dir_path);
 	$dir_handle;
+
+	//JS
+	echo '<script type="text/javascript">' . $GLOBALS['normjs'] . '</script>';
 
 	//Navigation Bar
 	echo "Actual Dir: $main_dir<br/>";
@@ -267,15 +273,10 @@ function checkpw() {
 	if (!isset($_COOKIE['browse_pw'])) noaccess();
 	if ($_COOKIE['browse_pw'] != $GLOBALS['user_pw'] && $_COOKIE['browse_pw'] != $GLOBALS['admin_pw']) noaccess();
 	setcookie_3d('browse_pw', $_COOKIE['browse_pw']);
-	$GLOBALS['head'] .= $GLOBALS['logout_form'];
-}
+	}
 function login() {
 	if (!isset($_GET['browse_pw'])) return;
 	setcookie_3d('browse_pw', $_GET['browse_pw']);
-	redirect();
-}
-function logout() {
-	delcookie('browse_pw');	
 	redirect();
 }
 
@@ -348,6 +349,13 @@ class MyFile {
 		}
 		if (($GLOBALS['edit_enabled'] || $GLOBALS['isadm']) && $this->isFile()) {
 			$r.= '<td id="col_edit"><form><input type="hidden" name="path" value="'.$this.'" /><input type="submit" name="action" value="Edit" /></form></td>';
+		} else {
+			$r.= '<td></td>';
+		}
+
+		if (($GLOBALS['genlink_enabled'] || $GLOBALS['isadm']) && startsWith($this, $GLOBALS['webserver_root'])) {
+			$link=$GLOBALS['protocol'] . $_SERVER["SERVER_NAME"] . substr($this,strlen($GLOBALS['webserver_root']));
+			$r.= '<td class="col_link"><input type="text" value="'.$link.'" /></td>';
 		}
 		$r.="</tr>";
 		return $r;
@@ -439,9 +447,9 @@ function delcookie($key) {
 //Files
 $head=file_get_contents("head");
 $css=file_get_contents("css.css");
-$logout_form = '<form id="logout_form" action="'.phplink().'"><input type="hidden" name="action" value="logout" /><input type="submit" value="Logout" /></form>';
-$login_form = '<form id="login_form" actin="'.phplink().'"><input type="hidden" name="action" value="flogin" /><input type="submit" value="Login" /></form>';
+$login_form = '<form id="login_form" actin="'.phplink().'"><input type="hidden" name="action" value="flogin" /><input type="submit" value="Change User" /></form>';
 if ($codemirror_enabled) $editjs = file_get_contents("edit.js");
+$normjs = file_get_contents("normal.js");
 $head .= '<style type="text/css">' . $css . '</style></head><body>';
 if ($upload_enabled || $GLOBALS['isadm']) $uploadform=file_get_contents("uploadform");
 $file_icon = (file_exists("file_icon.png"))? "file_icon.png" : "http://www.abload.de/img/file_icong8ie.png";
