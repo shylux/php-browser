@@ -34,6 +34,7 @@ $upload_enabled = false;
 $createdir_enabled = true;
 $delete_enabled = false;
 $edit_enabled = true;
+$createarchive_enabled = false;
 
 //Generates a http link
 $genlink_enabled = true;
@@ -90,6 +91,7 @@ function main() {
 	if ($_GET['action'] == "download") download();
 	if ($_GET['action'] == "createdir") createdir();
 	if ($_GET['action'] == "createfile") createfile();
+	if ($_GET['action'] == "archive") archive();
 	if ($_GET['action'] == "Delete") delete();
 	if ($_GET['action'] == "upload") upload();
 	if ($_GET['action'] == "Edit") check_edit_redirect();
@@ -111,7 +113,7 @@ function browse() {
 	echo '<script type="text/javascript">' . $GLOBALS['normjs'] . '</script>';
 
 	//Navigation Bar
-	echo "Actual Dir: $main_dir<br/>";
+	echo "Current Dir: $main_dir<br/>";
 
 	$list = $main_dir->listfiles();
 	echo "<table>";
@@ -136,6 +138,7 @@ function browse() {
 	echo $main_dir->createfile_form();
 	echo "</table>";
 	echo $main_dir->upload_form();
+	echo $main_dir->archive_form();
 
 	//change http/https
 	changeprotocol();
@@ -210,6 +213,36 @@ function createdir() {
 	if (file_exists($newdirname)) redirect("Error: Entity already exists.");
 	mkdir($newdirname);
 	redirect("Directory created.");
+}
+
+//Creates an Zip-Archive
+function archive() {
+	$zip = new ZipArchive();
+	$dir = new MyFile($_GET['path']);
+	$filename = $dir . DIRECTORY_SEPARATOR . "Backup_" . date("Y-m-d_H:i:s") . ".zip";
+	///echo $filename . "<br/>";
+
+	if ($zip->open($filename, ZIPARCHIVE::CREATE)!==TRUE) redirect("Can't open archive!");
+
+	$list = getrecfiles($dir);
+	foreach ($list as $i => $value) {
+		if (startsWith($value->getName(), "Backup_")) continue; 
+		$zipname = str_replace($dir, "", $value);
+		//echo $zipname . "---" . $value . "<br/>";
+		$zip->addFile($value, $zipname);
+	}
+	$zip->close();
+	redirect("Backup created.");
+}
+
+function getrecfiles($top) {
+	$rearr = array();
+	$list = $top->listfiles();
+	foreach ($list as $value) {
+		if ($value->isDir()) $rearr = array_merge($rearr, getrecfiles($value));
+		if ($value->isFile()) array_push($rearr, $value);
+	}
+	return $rearr;
 }
 
 //Create a File in the GET[path] with the given GET[filename]
@@ -385,6 +418,10 @@ class MyFile {
 	public function createfile_form() {
 		if (!$GLOBALS["upload_enabled"] && !$GLOBALS['isadm'] || !is_writable($this)) return;
 		echo '<tr><form method="GET" action="'.$this->phplink().'"><td><img src="'.$GLOBALS['file_icon'].'" alt="" /></td><td><input name="action" value="createfile" type="hidden" /><input name="path" value="'.$this.'" type="hidden"/><input name="filename" type="text" /></td><td><input type="submit" value="Create File" /></td></form><td></td></tr>';
+	}
+	public function archive_form() {
+		if (!$GLOBALS["createarchive_enabled"] && !$GLOBALS['isadm'] || !is_writable($this)) return;
+		echo '<form id="archive_form" method="POST" action="'.$this->phplink().'?action=archive&path='.$this.'"><input type="submit" value="Archive Folder"/></form>';
 	}
 
 	public function listfiles() {

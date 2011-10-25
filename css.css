@@ -94,3 +94,7 @@ input:disabled {
 .syn_change {
 	margin-right: 10px;
 }
+
+#archive_form {
+	margin-top: 20px;
+}
