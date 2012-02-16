@@ -41,7 +41,7 @@ $genlink_enabled = true;
 $webserver_root = "/var/www";
 
 //password protection
-$pw_protection = true;
+$pw_protection = false;
 $user_pw = "fu";
 
 //admin has access to all features
