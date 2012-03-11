@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+        <link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
+	<link rel="shortcut icon" href="[[favicon]]" type="image/x-icon" />
+	[[codemirror]]
+        <title>[[title]]</title>
+</head>
+<body>
+[[content]]
+</body>
+</html>

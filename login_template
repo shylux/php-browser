@@ -1,0 +1,7 @@
+Password protected area. </br>
+<form action='?action=login' type='GET'>
+	<input name='action' value='login' type='hidden'/>
+	<input id=login_form_pw name='browse_pw' type='password' />
+	<input name='path' value='[[path]]' type='hidden'/>
+	<input type='submit' value='Login' />
+</form>
