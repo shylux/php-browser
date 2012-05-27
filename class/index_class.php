@@ -53,7 +53,7 @@ class Config {
 	public $USER_CREATE_DIR = true; // Is the user allowed to create a new directory?
 	public $USER_DELETE = false; // Is the user allowed to delete a file or a directory?
 	public $USER_EDIT = true; // Is the user allowed to edit a file?
-	public $USER_BACKUP = false; // Is the user allowed to create a backup of a directoy?
+	public $USER_BACKUP = false; // TODO:YYYYYhe user allowed to create a backup of a directoy?
 	public $USER_RENAME = false; // Is the user allowed to rename a file/directory?
 	
 	// Superuser
@@ -64,7 +64,7 @@ class Config {
 
 	// Other
 	public $CONTACT_EMAIL = 'shylux@gmail.com';
-	public $CODEMIRROR_ENABLED = true; // Codemirror is the integrated editor.
+	public $CODEMIRROR_ENABLED = false; // Codemirror is the integrated editor.
 	public $COOKIE_NAME = 'phpbrowser_password';
 
 	public $WEBSERVER_ROOT = '/var/www';
@@ -237,6 +237,8 @@ class PhpBrowser {
 	function buildEdit() { 
 		$file = new JFile($_REQUEST['path']);
 		if (!$file->exists() || !$file->isFile()) {$this->buildBrowse();return;}
+
+		if ($this->config->CODEMIRROR_ENABLED) {
 		?>
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
 		<script src="CodeMirror2/lib/codemirror.js"></script>
@@ -252,6 +254,8 @@ class PhpBrowser {
 		<script src="CodeMirror2/mode/php/php.js"></script>
 		<script type="text/javascript" src="edit.js"></script>
 
+		<? } ?>
+
 		<form action="?action=save&path=<?= $file ?>" method="POST">
 			<? if ($file->canWrite()) { ?>
 				<input type="submit" value="Save" />
@@ -259,7 +263,7 @@ class PhpBrowser {
 			<a href="?path=<?= $file->getParent(); ?>">Back to Directory</a>
 			<div id="edit_filename"><?= $file ?></div>
 			
-			<div id="syntax_modes">
+			<div class="nojs" id="syntax_modes">
 				<div mode="php" class="selected">PHP</div>
 				<div mode="javascript">Javascript</div>
 				<div mode="htmlmixed">HTML</div>
@@ -268,7 +272,7 @@ class PhpBrowser {
 				<div mode="text/x-csrc">C</div>
 				<div mode="python">Python</div>
 			</div>
-			<textarea id="code" name="browser_file_content"><?= $file->getContent() ?></textarea>
+			<textarea id="code" class="nojs" name="browser_file_content"><?= $file->getContent() ?></textarea>
 		</form>
 	<? }
 

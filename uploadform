@@ -1,5 +1,0 @@
-<form enctype="multipart/form-data" action="[[uploadactiontarget]]" method="POST">
-	Upload a File:
-	<input id="upload_select" name="files[]" type="file" multiple="true" />
-	<input id="upload_start" type="submit" value="Start upload" />
-</form>

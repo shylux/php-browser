@@ -1,6 +1,7 @@
 $(document).ready(function() {
-	var defaultconf;
+	$('.nojs').removeClass('nojs');
 
+	var defaultconf;
 	switch ($('#edit_filename').html().split('.').pop()) {
 		case 'js':
 			defaultconf = 'javascript';

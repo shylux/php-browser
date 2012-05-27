@@ -36,7 +36,7 @@ td {
 }
 
 td.filename {
-	min-width: 130px;
+	min-width: 200px;
 }
 
 #edit_filename {
@@ -64,4 +64,13 @@ td.filename {
 
 #browser_ttable {
 	margin-left: 20px;
+}
+
+#syntax_modes.nojs {
+	display: none;
+}
+
+#code.nojs {
+	width: 100%;
+	min-height: 200px;
 }
