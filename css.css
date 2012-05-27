@@ -88,7 +88,6 @@ input:disabled {
 	clear: left;
 	border: 1px solid black;
 	height: auto;
-	max-height: 800px;
 }
 
 .syn_change {

@@ -57,7 +57,7 @@ class Config {
 	public $USER_RENAME = false; // Is the user allowed to rename a file/directory?
 	
 	// Superuser
-	public $SUPERUSER_PASSWORD = 'roflroflnoobnoob';
+	public $SUPERUSER_PASSWORD = 'fdsaasdf';
 
 	// Upload
 	public $FORBIDDEN_EXTENSIONS = array('php');
@@ -66,6 +66,8 @@ class Config {
 	public $CONTACT_EMAIL = 'shylux@gmail.com';
 	public $CODEMIRROR_ENABLED = true; // Codemirror is the integrated editor.
 	public $COOKIE_NAME = 'phpbrowser_password';
+
+	public $WEBSERVER_ROOT = '/var/www';
 
 	function __construct() {
 		$this->USER_PRISON = realpath($this->USER_PRISON);
@@ -77,11 +79,25 @@ class PhpBrowser {
 	private $isAdmin = false;
 	private $message = null;
 	private $path = null;
+	private $path_changed = false;
 
 	function __construct($str_path) {
 		$this->config = new Config();
-		$path = (isset($str_path) && strlen($str_path) > 0) ? new JFile($str_path) : new JFile($this->config->USER_PRISON);
-		if (!$path->exists()) $path = new JFile($this->config->USER_PRISON);
+		$this->login();
+		// check path
+		if (
+			isset($str_path) &&
+			strlen($str_path) > 0 &&
+			( strpos($str_path, $this->config->USER_PRISON) === 0 || $this->isAdmin )
+		) {
+			$path = new JFile($str_path);
+			if (!$path->exists()) {
+				$this->path_changed = true;
+				$path = new JFile($this->config->USER_PRISON);
+			}
+		} else {
+			$path = new JFile($this->config->USER_PRISON);
+		}
 		$this->path = $path;
 	}
 
@@ -100,7 +116,7 @@ class PhpBrowser {
 			}
 		}
 		if (!$this->config->USER_ENABLED) return true;
-		$this->buildLogin();
+		//$this->buildLogin();
 		return false;
 	}
 	function logout() {
@@ -109,24 +125,30 @@ class PhpBrowser {
         
         // Functions
   	function download() {
-                if (!$this->path->isFile()) return;
+                if ($this->path_changed || !$this->path->isFile()) return;
                 header('Content-Description: File Transfer');
                 header('Content-Disposition: attachment; filename='.$this->path->getName());
                 header('Content-Length: ' . $this->path->length());
                 readfile($this->path);
   	}
 	function createFile() {
-		if (!isset($_REQUEST['filename'])) return;
+		if ($this->path_changed || !isset($_REQUEST['filename'])) return;
 		//$newfile = new JFile($this->path, $_REQUEST['filename']);
 		$this->path->createNewFile($_REQUEST['filename']);
 	}
 	function createDirectory() {
-		if (!isset($_REQUEST['dirname'])) return;
+		if ($this->path_changed || !isset($_REQUEST['dirname'])) return;
 		$this->path->mkdir($_REQUEST['dirname']);
 	}
 	function delete() {
-		$this->path->delete();
-		if ($this->path->isDirectory()) $this->path = $this->path->getParent();
+		if ($this->path_changed) return;
+		$tmppath = $this->path;
+		if ($this->path->isDirectory()) {
+			$this->path = $this->path->getParent();
+		} else {
+			$this->path = $this->path->getDirectory();
+		}
+		$tmppath->delete();
 	} 
 
 	// Build the page
@@ -134,42 +156,68 @@ class PhpBrowser {
 		$upperdir = ($this->path->isDirectory()) ? $this->path->getParent() : $this->path->getParent()->getParent();
 		?>
 		<div id=browser_list> <table id=browser_ttable>
-			<tr><td><a href="?path=<?= $upperdir ?>"><?= $upperdir->getName() ?></a>
-		<? foreach ($this->path->listFiles() as $file) {	?>
+			<tr>
+				<td><img src="up_icon.png" /></td>
+				<td colspan="100%">
+	                        	<a class="directory" href="?path=<?= $upperdir ?>">Upper Directory</a>
+				</td>
+			</tr>
+		<?
+		$filelist = $this->path->listFiles();
+		if (count($filelist) == 0) { ?>
+			<tr><td colspan="100%"><b>No Files or Directorys</b></td></tr>
+		<? }
+		// diesplay files and directorys
+		foreach ($this->path->listFiles() as $file) {	?>
 			<tr>
 			<td>
-			<? //Browse
+			<img src="<?=($file->isFile()) ? "file_icon.png" : "folder_icon.png" ?>" />
+			<? //show read/write/execute
+			/*
+			echo ($file->canRead()) ? "<b>r</b>" : "r";
+			echo ($file->canWrite()) ? "<b>w</b>" : "w";
+			echo ($file->canExecute()) ? "<b>x</b>" : "x";
+			*/
+			?>
+			</td><td class="filename">
+			<? //Browse no action needed
                         if ($file->isDirectory()) { ?>
-                        	<a href="?path=<?= $file ?>&action=browse"> <?= $file->getName() ?> </a>
+                        	<a class="directory" href="?path=<?= $file ?>"> <?= $file->getName() ?> </a>
                         <? } else {
                         	echo $file->getName();
                         } ?>	
-                        </td><td>
+                        </td><td class="tdedit">
+			<? //Edit
+                        if ($file->isFile()) { ?>
+				<a href="?action=edit&path=<?= $file ?>"><? echo ($file->canWrite()) ? "Edit" : "Read"; ?> </a>
+			<? } ?>
+			</td><td class="tddownload">
                         <? //Download
                         if ($file->isFile()) { ?>
                         	<a href="?path=<?= $file ?>&action=download">Download</a>
                         <? } ?>
-                        </td><td>
-			<? //Edit
-                        if ($file->isFile() && $file->canWrite()) { ?>
-				<a href="?action=edit&path=<?= $file ?>">Edit</a>
-			<? } ?>
-			</td>
-			<td>
+                        </td><td class="tddelete">
 			<? //Delete
                         if ($file->canWrite()) { ?>
 				<a href='?action=delete&path=<?= $file ?>'>Delete</a>
 			<? } ?>
+			</td><td class="tdlink">
+			<? //Link
+			if (strpos($file, $this->config->WEBSERVER_ROOT) === 0) { ?>
+				<a href="<?= substr($file, strlen($this->config->WEBSERVER_ROOT)) ?>">Web Link</a>
+			<? } ?>
 			</td>
-		<? } ?>
+		<? } 
+		if ($this->path->canWrite()) {
+		?>
 		<tr>
-			<td colspan=2><form action="?action=cfile&path=<?= $this->path->getDirectory() ?>" method=POST>
+			<td colspan="100%"><form action="?action=cfile&path=<?= $this->path->getDirectory() ?>" method=POST>
 				<input name=filename />
 				<input type=submit value="Create File" />
 			</form></td>
 		</tr>
 		<tr>
-			<td colspan=2><form action="?action=cdir&path=<?= $this->path->getDirectory() ?>" method=POST>
+			<td colspan="100%"><form action="?action=cdir&path=<?= $this->path->getDirectory() ?>" method=POST>
 				<input name=dirname />
 				<input type=submit value="Create Directory" />
 			</form></td>
@@ -183,18 +231,51 @@ class PhpBrowser {
 		</form>
 		</div>
 		<?
+		}
 	}
 
 	function buildEdit() { 
-		if (!isset($_REQUEST['path']) || strlen($_REQUEST['path']) == 0) {$this->buildBrowse();return;}
 		$file = new JFile($_REQUEST['path']);
 		if (!$file->exists() || !$file->isFile()) {$this->buildBrowse();return;}
 		?>
-		<form action="?action=save&path=<?= $file ?>">
-			<textarea name="browser_file_content"><?= $file->getContent() ?></textarea>
-			<input type=submit value=Save />
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+		<script src="CodeMirror2/lib/codemirror.js"></script>
+		<script src="CodeMirror2/mode/javascript/javascript.js"></script>
+		<script src="CodeMirror2/mode/clike/clike.js"></script>
+		<script src="CodeMirror2/mode/css/css.js"></script>
+		<script src="CodeMirror2/mode/diff/diff.js"></script>
+		<script src="CodeMirror2/mode/haskell/haskell.js"></script>
+		<script src="CodeMirror2/mode/stex/stex.js"></script>
+		<script src="CodeMirror2/mode/xml/xml.js"></script>
+		<script src="CodeMirror2/mode/python/python.js"></script>
+		<script src="CodeMirror2/mode/htmlmixed/htmlmixed.js"></script>
+		<script src="CodeMirror2/mode/php/php.js"></script>
+		<script type="text/javascript" src="edit.js"></script>
+
+		<form action="?action=save&path=<?= $file ?>" method="POST">
+			<? if ($file->canWrite()) { ?>
+				<input type="submit" value="Save" />
+			<? } else { ?>Read only<? } ?>
+			<a href="?path=<?= $file->getParent(); ?>">Back to Directory</a>
+			<div id="edit_filename"><?= $file ?></div>
+			
+			<div id="syntax_modes">
+				<div mode="php" class="selected">PHP</div>
+				<div mode="javascript">Javascript</div>
+				<div mode="htmlmixed">HTML</div>
+				<div mode="css">CSS</div>
+				<div mode="xml">XML</div>
+				<div mode="text/x-csrc">C</div>
+				<div mode="python">Python</div>
+			</div>
+			<textarea id="code" name="browser_file_content"><?= $file->getContent() ?></textarea>
 		</form>
 	<? }
+
+	function save() {
+		if ($this->path_changed || !$this->path->isFile() || !isset($_REQUEST['browser_file_content'])) return;
+		$this->path->setContent($_REQUEST['browser_file_content']);
+	}
 	
 	function buildLogin() { ?>
 		Password protected area. </br>
@@ -240,6 +321,9 @@ class JFile {
 	public function canWrite() {
 		return is_writable($this->path);
 	}
+	public function canExecute() {
+		return is_executable($this->path);
+	}
 	public function exists() {
 		return file_exists($this->path);
 	}
@@ -263,6 +347,9 @@ class JFile {
 	public function getContent() {
 		return file_get_contents($this->path);
 	}
+	public function setContent($cont) {
+		return file_put_contents($this->path, $cont);
+	}
 
 	// File modification
 	public function createNewFile($filename) {
@@ -282,6 +369,7 @@ class JFile {
 			foreach ($this->listFiles() as $file) {
 				$file->delete();
 			}
+			rmdir($this);
 		}
 	}
 
@@ -297,7 +385,6 @@ class JFile {
 	}
 	public function listFiles() {
 		$dir = $this->getDirectory();
-		echo $dir;
 		$files = scandir($dir); 
 		$filearray = array();
 		foreach ($files as $file) {
@@ -326,10 +413,12 @@ if ($_REQUEST['action'] == 'download') {
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
         <link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
 	<link rel="shortcut icon" href="[[favicon]]" type="image/x-icon" />
+	<link rel="stylesheet" href="CodeMirror2/lib/codemirror.css">
+	<link rel="stylesheet" href="phpbrowser.css">
         <title>Browser</title>
 </head>
 <body>
-<a href="?action=logout">Logout</a>
+<a id="logout" href="?action=logout">Change User</a>
 <?php
 if ($phpbrowser->login()) {
 	switch ($_REQUEST['action']) {
@@ -337,6 +426,8 @@ if ($phpbrowser->login()) {
 			$phpbrowser->logout();
 			$phpbrowser->buildLogin();
 			break;
+		case 'save':
+			$phpbrowser->save();
 		case 'edit':
 			$phpbrowser->buildEdit();
 			break;
@@ -355,6 +446,8 @@ if ($phpbrowser->login()) {
 			$phpbrowser->buildBrowse();
 			break;
 	}
+} else {
+	$phpbrowser->buildLogin();
 }
 ?>
 </body>

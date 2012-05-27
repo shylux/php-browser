@@ -1,0 +1,67 @@
+* {
+	font-family: "Courier New";
+	font-size: 0.98em;
+}
+
+#logout {
+	float: right;
+}
+
+a, input, #syntax_modes div {
+	color: black;
+	text-decoration: none;
+	background-color: #EBEBEB;
+	padding: 2px 7px;
+	border: 1px solid gray;
+	border-top: none;
+	border-bottom: none;
+}
+
+a:hover, input[type=submit]:hover, #syntax_modes div:hover {
+	background-color: #DEDEDE;
+	cursor: pointer;
+}
+
+.directory {
+	display: block;
+	width: 100%;
+	border: none;
+	background-color: white;
+	text-decoration: underline;
+	padding: 0;
+}
+
+td {
+	padding: 2px 2px;
+}
+
+td.filename {
+	min-width: 130px;
+}
+
+#edit_filename {
+	display: inline;
+}
+
+.CodeMirror-scroll {
+	clear: left;
+	border: 1px solid #EEE;
+	height: auto;
+	overflow-y: hidden;
+	overflow-x: auto;
+	width: 100%
+}
+
+#syntax_modes div {
+	float: left;
+	margin: 5px 4px;
+	padding: 2px 7px;
+}
+
+#syntax_modes div.selected {
+	background-color: #DEDEDE;
+}
+
+#browser_ttable {
+	margin-left: 20px;
+}
