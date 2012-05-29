@@ -17,6 +17,7 @@
 <body>
 
 <?php
+/*
 $output = "";
 if (isset($_POST['shell_command'])) {
 $descriptorspec = array(
@@ -34,12 +35,19 @@ if (is_resource($process)) {
 	$return_value = proc_close($process);
 }
 }
+*/
+$output = shell_exec('ls -d -1 $PWD/*');
+$output = split("\n", $output);
+foreach ($output as $key => $value) {
+	if (strlen($value) == 0) unset($output[$key]);
+}
+
 ?>
 
 <h1>PHP-Shell</h1>
+<?= var_dump($output); ?>
 <textarea id="shell_output">
 	<?php
-		echo $output;
 	?>
 </textarea>
 <br/>

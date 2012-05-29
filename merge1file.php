@@ -18,10 +18,12 @@ while (isset($argv[$i])) {
 	$content = trim($content, "\n");
 	if ($singleline) $content = str_replace("\n", "", $content);
 	$content = "'". $content ."'";
+
 	$search = "file_get_contents(\"".$argv[$i]."\")";
 	$file = str_replace($search, $content, $file);
 	$search = "file_get_contents('".$argv[$i]."')";
 	$file = str_replace($search, $content, $file);
+
 	$i++;
 }
 file_put_contents($argv[1], $file);
