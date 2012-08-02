@@ -8,6 +8,13 @@ class JFile {
 	public function __construct($path, $filename = "") {
 		if (strlen($filename) > 0) $filename = DIRECTORY_SEPARATOR . $filename;
 		$this->path = realpath((string)$path . (string)$filename);
+		if (!is_string($this->path)) trigger_error("Error in JFile create: ".(string)$path . (string)$filename);
+	}
+	public static function virtual($path, $filename = "") {
+		if (strlen($filename) > 0) $filename = DIRECTORY_SEPARATOR . $filename;
+		$vfile = new JFile('/');
+		$vfile->path = (String)$path . $filename;
+		return $vfile;
 	}
 	public function __toString() {
 		return $this->path;
@@ -59,7 +66,7 @@ class JFile {
 		if ($dirname != null) return mkdir($this->path . DIRECTORY_SEPARATOR . $dirname);
 		return mkdir($this->path);
 	}
-	public function renameTo(String $newpath) {
+	public function renameTo($newpath) {
 		return rename($this->path, $newpath);
 	}
 	public function delete() {
@@ -91,7 +98,50 @@ class JFile {
 			array_push($filearray, new JFile($dir, $file));
 		}
 		return $filearray;
-	}
-	
+	}	
+}
+
+if (isset($argv) && in_array("test", $argv)) {
+	p("Start testing...");
+	p("Setting up direcetory '.'");
+	$f = new JFile('.');
+	p(".toString()");
+	echo $f;
+	p("read, write and execute");
+	var_dump($f->canRead());
+	var_dump($f->canWrite());
+	var_dump($f->canExecute());
+	p("exists");
+	var_dump($f->exists());
+	p("isDir, isFile");
+	var_dump($f->isDirectory());
+	var_dump($f->isFile());
+	p("getName");
+	echo $f->getName();
+	p("last modified");
+	var_dump($f->lastModified());
+	p("Setting up test file...");
+	$f->createNewFile('php_test_file');
+	$t = new JFile('./php_test_file');
+	p("setContent");
+	$t->setContent("test");
+	p("getContent, length");
+	echo $t->getContent();
+	var_dump($t->length());
+	p("renameTo");
+	$t->renameTo('php_test_file2');
+	$t = new JFile('./php_test_file2');
+	p("getDirectory");
+	echo $t->getDirectory();
+	p("getParent");
+	echo $t->getParent();
+	p("listFiles");
+	var_dump($f->listFiles());
+	p("delete");
+	$t->delete();
+}
+
+function p($testmsg) {
+	echo "\n===  $testmsg\n";
 }
 ?>

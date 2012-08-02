@@ -66,7 +66,7 @@ class Config {
 
 	// Other
 	public $CONTACT_EMAIL = 'shylux@gmail.com';
-	public $CODEMIRROR_ENABLED = false; // Codemirror is the integrated editor.
+	public $CODEMIRROR_ENABLED = true; // Codemirror is the integrated editor.
 	public $COOKIE_NAME = 'phpbrowser_password';
 
 	public $WEBSERVER_ROOT = '/var/www';
@@ -138,6 +138,11 @@ class PhpBrowser {
 		//$newfile = new JFile($this->path, $_REQUEST['filename']);
 		$this->path->createNewFile($_REQUEST['filename']);
 	}
+	function rename() {
+		$newfile = $this->path->getDirectory() . DIRECTORY_SEPARATOR . $_REQUEST["newname"];
+		$this->path->renameTo($newfile);
+		$this->path = new JFile($newfile);
+	}
 	function createDirectory() {
 		if ($this->path_changed || !isset($_REQUEST['dirname'])) return;
 		$this->path->mkdir($_REQUEST['dirname']);
@@ -181,13 +186,17 @@ class PhpBrowser {
 			echo ($file->canExecute()) ? "<b>x</b>" : "x";
 			*/
 			?>
-			</td><td class="filename">
+			</td><td class="filename <?=($file->isDirectory())?"directory":"file"?>">
 			<? //Browse no action needed
                         if ($file->isDirectory()) { ?>
                         	<a class="directory" href="?path=<?= $file ?>"> <?= $file->getName() ?> </a>
-                        <? } else {
-                        	echo $file->getName();
-                        } ?>	
+                        <? } else { ?>
+				<span class="filename_name"><?= $file->getName() ?></span>
+				<form class="filename_rename" action="?action=rename&path=<?= $file ?>" method="POST">
+					<input name="newname" value="<?= $file->getName() ?>" />
+					<input type="submit" value="Rename" />
+				</form>
+                        <? } ?>	
                         </td><td class="tdedit">
 			<? //Edit
                         if ($file->isFile()) { ?>
@@ -233,6 +242,20 @@ class PhpBrowser {
 		</form>
 		</div>
 		<?
+		}
+	}
+
+	function upload() {
+		$dir = $this->path->getDirectory();
+		foreach ($_FILES['files']['name'] as $key => $value) {
+			if ($_FILES['files']['error'][$key] > 0) {
+				echo "file upload error: " . $_FILES['files']['error'][$key];
+				continue;
+			}
+			$destfile = JFile::virtual($dir, $_FILES['files']['name'][$key]);
+			if(!move_uploaded_file($_FILES['files']['tmp_name'][$key], (String)$destfile)) 
+				echo("Error while moving the file.");
+			
 		}
 	}
 
@@ -292,6 +315,12 @@ class PhpBrowser {
 			<input type='submit' value='Login' />
 		</form>
 	<? }
+
+	function getUserTitle() {
+		if (!$this->login()) return "Stranger";
+		if ($this->isAdmin) return "Admin";
+		return "User";
+	}
 }
 
 // Class for general tasks
@@ -314,6 +343,8 @@ if (!isset($_REQUEST['action'])) $_REQUEST['action'] = null;
 // download have to set header. so it have to be invoked before sending anything.
 if ($_REQUEST['action'] == 'download') {
 	if ($phpbrowser->login()) $phpbrowser->download();
+} elseif ($_REQUEST['action'] == 'logout') {
+	$phpbrowser->logout();
 }
                                                                    
 
@@ -322,20 +353,22 @@ if ($_REQUEST['action'] == 'download') {
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-        <link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
-	<link rel="shortcut icon" href="[[favicon]]" type="image/x-icon" />
+        <link rel="icon" href="folder_icon.png" type="image/vnd.microsoft.icon" />
+	<link rel="shortcut icon" href="folder_icon.png" type="image/x-icon" />
 	<link rel="stylesheet" href="CodeMirror2/lib/codemirror.css">
 	<link rel="stylesheet" href="phpbrowser.css">
         <title>Browser</title>
 </head>
 <body>
-<a id="logout" href="?action=logout">Change User</a>
 <?php
 if ($phpbrowser->login()) {
+?>
+<div id="logout"><span id="usertitle">Logged in as <?=$phpbrowser->getUserTitle() ?></span><a id="logout" href="?action=logout">Change User</a></div>
+<?php
 	switch ($_REQUEST['action']) {
-		case 'logout':
-			$phpbrowser->logout();
-			$phpbrowser->buildLogin();
+		case 'upload':
+			$phpbrowser->upload();
+			$phpbrowser->buildBrowse();
 			break;
 		case 'save':
 			$phpbrowser->save();
@@ -346,12 +379,17 @@ if ($phpbrowser->login()) {
 			$phpbrowser->createFile();
 			$phpbrowser->buildBrowse();
 			break;
+		case 'rename':
+			$phpbrowser->rename();
+			$phpbrowser->buildBrowse();
+			break;
 		case 'cdir':
 			$phpbrowser->createDirectory();
 			$phpbrowser->buildBrowse();
 			break;
 		case 'delete':
 			$phpbrowser->delete();
+		case 'logout':
 		case 'browse':
 		default:
 			$phpbrowser->buildBrowse();

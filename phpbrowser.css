@@ -6,6 +6,9 @@
 #logout {
 	float: right;
 }
+#usertitle {
+	margin-right: 10px;
+}
 
 a, input, #syntax_modes div {
 	color: black;
@@ -33,10 +36,29 @@ a:hover, input[type=submit]:hover, #syntax_modes div:hover {
 
 td {
 	padding: 2px 2px;
+	white-space: nowrap;
 }
 
 td.filename {
-	min-width: 200px;
+	min-width: 260px;
+}
+span.filename_name {
+	display: block;
+	height: 20px;
+}
+
+.filename_rename {
+	display: none;
+}
+.filename_rename input {
+	margin: 0;
+}
+
+td.filename:hover .filename_name {
+	display: none;
+}
+td.filename:hover .filename_rename {
+	display: block;
 }
 
 #edit_filename {
