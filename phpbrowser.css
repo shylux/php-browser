@@ -49,6 +49,8 @@ span.filename_name {
 
 .filename_rename {
 	display: none;
+	height: 20px;
+	overflow: hidden;
 }
 .filename_rename input {
 	margin: 0;

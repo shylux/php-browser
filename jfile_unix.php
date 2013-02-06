@@ -12,7 +12,7 @@ class JFile {
 
 	private function exec($command) {
 		$r = shell_exec($command);
-		echo $r;
+		var_dump($r);
 		return $r;
 	}
 
@@ -95,10 +95,11 @@ class JFile {
 		$filearray = array();
 		//$command = "ls -d -1 "+$dir+"/*";
 		var_dump($dir);
-		$command = "ls -d -1 /*";
+		$command = "ls";
 		var_dump($command);
 		$output = shell_exec($command);
-		$output = split("\n", $output);
+		$output = split("\t", $output);
+		var_dump($output);
 		foreach ($output as $key => $value) {
 			if (strlen($value) != 0) {
 				array_push($filearray, new JFile($value));
@@ -109,7 +110,7 @@ class JFile {
 	
 }
 
-if (in_array("test", $argv)) {
+if (isset($argv) && in_array("test", $argv)) {
 	p("Start testing...");
 	p("Setting up direcetory '.'");
 	$f = new JFile('.');

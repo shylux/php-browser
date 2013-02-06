@@ -55,8 +55,8 @@ class Config {
 	public $USER_CREATE_DIR = true; // Is the user allowed to create a new directory?
 	public $USER_DELETE = false; // Is the user allowed to delete a file or a directory?
 	public $USER_EDIT = true; // Is the user allowed to edit a file?
-	public $USER_BACKUP = false; // TODO:YYYYYhe user allowed to create a backup of a directoy?
-	public $USER_RENAME = false; // Is the user allowed to rename a file/directory?
+	public $USER_BACKUP = false; // TODO: The user allowed to create a backup of a directoy?
+	public $USER_RENAME = false; // TODO: Is the user allowed to rename a file/directory?
 	
 	// Superuser
 	public $SUPERUSER_PASSWORD = 'fdsaasdf';
@@ -135,16 +135,19 @@ class PhpBrowser {
   	}
 	function createFile() {
 		if ($this->path_changed || !isset($_REQUEST['filename'])) return;
+		if (JFile::virtual($_REQUEST['filename'])->exists()) return;
 		//$newfile = new JFile($this->path, $_REQUEST['filename']);
 		$this->path->createNewFile($_REQUEST['filename']);
 	}
 	function rename() {
 		$newfile = $this->path->getDirectory() . DIRECTORY_SEPARATOR . $_REQUEST["newname"];
+		if (JFile::virtual($newfile)->exists()) return;
 		$this->path->renameTo($newfile);
 		$this->path = new JFile($newfile);
 	}
 	function createDirectory() {
 		if ($this->path_changed || !isset($_REQUEST['dirname'])) return;
+		if (JFile::virtual($_REQUEST['dirname'])->exists()) return;
 		$this->path->mkdir($_REQUEST['dirname']);
 	}
 	function delete() {
